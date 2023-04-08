@@ -1,0 +1,228 @@
+#VRML_SIM R2023a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2022b/projects/objects/floors/protos/Floor.proto"
+EXTERNPROTO "../protos/MazeWallEastWest.proto"
+EXTERNPROTO "../protos/MazeWallNorthSouth.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.5773497822276153 0.5773497892167624 0.5773512361232849 2.0943230587273454
+  position -7.011981019385872e-05 -7.444975542255364e-05 1.7206518416293533
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+  luminosity 1.5
+}
+Floor {
+  size 1 1
+}
+DEF epuck E-puck {
+  translation 0.375 -0.375 -6.391454876127252e-05
+  rotation 0 0 1 1.57
+  controller "task1_wall_mapping"
+  supervisor TRUE
+  turretSlot [
+    Lidar {
+      translation 0.01 0 0.01
+      rotation 0 0 1 3.1415
+      horizontalResolution 360
+      fieldOfView 6.28319
+      numberOfLayers 1
+      minRange 0.04
+      noise 0.01
+    }
+    DEF Front DistanceSensor {
+      translation 0.037 0 0
+      name "front distance sensor"
+      lookupTable [
+        0 0 0
+        1 1 0.1
+      ]
+    }
+    DEF Right DistanceSensor {
+      translation 0 -0.037 0
+      rotation 0 0 1 -1.5708
+      name "right distance sensor"
+      lookupTable [
+        0 0 0
+        1 1 0.1
+      ]
+    }
+    DEF Rear DistanceSensor {
+      translation -0.037 0 0
+      rotation 0 0 1 3.1415
+      name "rear distance sensor"
+      lookupTable [
+        0 0 0
+        1 1 0.1
+      ]
+    }
+    DEF Left DistanceSensor {
+      translation 0 0.037 0
+      rotation 0 0 1 1.5708
+      name "left distance sensor"
+      recognitionColors [
+        0 0 0
+      ]
+      lookupTable [
+        0 0 0
+        1 1 0.1
+      ]
+    }
+    InertialUnit {
+      rotation -1 0 0 0
+    }
+    Camera {
+      translation 0.037 0 0
+      name "cameraFront"
+      recognitionColors [
+        1 1 0
+      ]
+      fieldOfView 1.57
+      width 80
+      height 80
+      recognition Recognition {
+      }
+    }
+    Camera {
+      translation 0 0.037 0
+      rotation 0 0 1 1.5708
+      name "cameraRight"
+      recognitionColors [
+        1 1 0
+      ]
+      fieldOfView 1.57
+      width 80
+      height 80
+      recognition Recognition {
+      }
+    }
+    Camera {
+      translation -0.037 0 0
+      rotation 0 0 1 3.14
+      name "cameraRear"
+      recognitionColors [
+        1 1 0
+      ]
+      fieldOfView 1.57
+      width 80
+      height 80
+      recognition Recognition {
+      }
+    }
+    Camera {
+      translation 0 -0.037 0
+      rotation 0 0 1 -1.5708
+      name "cameraLeft"
+      recognitionColors [
+        1 1 0
+      ]
+      fieldOfView 1.57
+      width 80
+      height 80
+      recognition Recognition {
+      }
+    }
+  ]
+}
+MazeWallNorthSouth {
+  translation -0.375 0.5 0.025
+  name "Cell 0 North Wall"
+}
+MazeWallEastWest {
+  translation -0.5 0.375 0.025
+  name "Cell 0 West Wall"
+}
+MazeWallNorthSouth {
+  translation -0.125 0.5 0.025
+  name "Cell 1 North Wall"
+}
+MazeWallNorthSouth {
+  translation -0.125 0.25 0.025
+  name "Cell 1 South Wall"
+}
+MazeWallNorthSouth {
+  translation 0.125 0.5 0.025
+  name "Cell 2 North Wall"
+}
+MazeWallNorthSouth {
+  translation 0.125 0.25 0.025
+  name "Cell 2 South Wall"
+}
+MazeWallNorthSouth {
+  translation 0.375 0.5 0.025
+  name "Cell 3 North Wall"
+}
+MazeWallEastWest {
+  translation 0.5 0.375 0.025
+  name "Cell 3 East Wall"
+}
+MazeWallNorthSouth {
+  translation -0.375 0 0.025
+  name "Cell 4 South Wall"
+}
+MazeWallEastWest {
+  translation -0.5 0.125 0.025
+  name "Cell 4 West Wall"
+}
+MazeWallNorthSouth {
+  translation -0.125 0 0.025
+  name "Cell 5 South Wall"
+}
+MazeWallEastWest {
+  translation 0.25 0.125 0.025
+  name "Cell 6 East Wall"
+}
+MazeWallEastWest {
+  translation 0.5 0.125 0.025
+  name "Cell 7 East Wall"
+}
+MazeWallEastWest {
+  translation -0.5 -0.125 0.025
+  name "Cell 8 West Wall"
+}
+MazeWallNorthSouth {
+  translation -0.125 -0.25 0.025
+  name "Cell 9 South Wall"
+}
+MazeWallEastWest {
+  translation 0.25 -0.125 0.025
+  name "Cell 10 East Wall"
+}
+MazeWallNorthSouth {
+  translation 0.125 -0.25 0.025
+  name "Cell 10 South Wall"
+}
+MazeWallEastWest {
+  translation 0.5 -0.125 0.025
+  name "Cell 11 East Wall"
+}
+MazeWallNorthSouth {
+  translation -0.375 -0.5 0.025
+  name "Cell 12 South Wall"
+}
+MazeWallEastWest {
+  translation -0.5 -0.375 0.025
+  name "Cell 12 West Wall"
+}
+MazeWallNorthSouth {
+  translation -0.125 -0.5 0.025
+  name "Cell 13 South Wall"
+}
+MazeWallNorthSouth {
+  translation 0.125 -0.5 0.025
+  name "Cell 14 South Wall"
+}
+MazeWallEastWest {
+  translation 0.5 -0.375 0.025
+  name "Cell 15 East Wall"
+}
+MazeWallNorthSouth {
+  translation 0.375 -0.5 0.025
+  name "Cell 15 South Wall"
+}

@@ -137,12 +137,11 @@ prev_l, prev_r = getPositionSensors()
 #########################################################
 # Robot and Maze classes
 class mazeMap:
-    def __init__(self, n=0, tiles = [], graph = {}, grid = [], cur_node = []):
+    def __init__(self, n=0, tiles = [], graph = {}, grid = []):
         self.n = n 
         self.tiles = tiles
         self.graph = graph
         self.grid = grid
-        self.cur_node = cur_node
 
     # code that generates the 4 points for all tiles, 16 tiles
     # generates top left, top right, bottom left, bottom right points of an nxn grid
@@ -190,6 +189,7 @@ class RobotPose:
 
     #print the grid & robot pose
     def printRobotPose(self, maze):
+        return
         print(f'x: {self.x:.2f}\ty: {self.y:.2f}\ttile: {self.tile}\ttheta: {self.theta:.2f}')
         for list in maze.grid:
             print("\t" + str(list))
@@ -224,14 +224,13 @@ class RobotPose:
             MAZE.updateGrid(tile-1)
 
 # initialize map and robot pose
-MAZE = mazeMap(n=4)
+MAZE = mazeMap(n=8)
 MAZE.generateTiles()
 MAZE.generateGrid()
 
-ROBOT_POSE = RobotPose(15.0, -15.0, 16, 90)
+ROBOT_POSE = RobotPose(15.0, -25.0, 36, 90)
 MAZE.updateGrid(ROBOT_POSE.tile-1)
-MAZE.cur_node = "3,3"
-MAZE.graph[MAZE.cur_node] = []
+
 ################ motion functions #####################
 # 5.024 = max speed in in per second
 def straightMotionD(d):
@@ -287,7 +286,7 @@ def checkWalls(theta):
     lidar = getLidar()
     no_wall = []
     for lid in lidar:
-        if lid < 4:
+        if lid < 5:
             no_wall.append(False)
         else:
             no_wall.append(True)
@@ -309,18 +308,18 @@ def neighTiles(tile, theta=90):
     n = MAZE.n
     i = tile//n
     j = tile%n
-    
-    MAZE.cur_node = str(i)+","+str(j)
 
-    node = MAZE.graph[MAZE.cur_node]
-    coma_indx = MAZE.cur_node.find(',')
-    node_i = int(MAZE.cur_node[:coma_indx])
-    node_j = int(MAZE.cur_node[coma_indx+1:])
+    cur_node = str(i)+","+str(j)
+
+    cur_node_neigh = []
+    coma_indx = cur_node.find(',')
+    node_i = int(cur_node[:coma_indx])
+    node_j = int(cur_node[coma_indx+1:])
     
-    node.append(str(node_i-1)+","+str(node_j))
-    node.append(str(node_i)+","+str(node_j-1))
-    node.append(str(node_i)+","+str(node_j+1))
-    node.append(str(node_i+1)+","+str(node_j))
+    cur_node_neigh.append(str(node_i-1)+","+str(node_j))
+    cur_node_neigh.append(str(node_i)+","+str(node_j-1))
+    cur_node_neigh.append(str(node_i)+","+str(node_j+1))
+    cur_node_neigh.append(str(node_i+1)+","+str(node_j))
 
     #up
     if i == 0: valid_neigh.append(False)
@@ -351,21 +350,25 @@ def neighTiles(tile, theta=90):
         else:
             valid_neigh.append(False)
 
-    # print(valid_neigh)
+    
     valid_walls = checkWalls(theta)
     for i in range(len(valid_walls)):
         if valid_walls[i] == False:
-            node[i] == "wall"
+            cur_node_neigh[i] = "wall"
             valid_neigh[i] = False
 
-    for neigh in node:
+    print(valid_walls)
+    print("-------------------------")
+    print(valid_neigh)
+    print(".")
+    print(".")
+
+    for neigh in cur_node_neigh:
         if neigh == "wall": continue
         if neigh not in MAZE.graph:
             MAZE.graph[neigh] = []
 
-    # print(valid_walls)
-    # print(valid_neigh)
-    # print("-------------------------")
+    MAZE.graph[cur_node] = cur_node_neigh
     return valid_neigh
 
 stack = []
@@ -434,22 +437,60 @@ def traversalRotationtHelper(theta, neighbors):
             stack.append(0)
             stack.append(0)
 
+def normalizeGraph(graph):
+    normalized = {}
+    min_i, min_j = 999, 999
+
+    for node in graph:
+        coma_indx = node.find(',')
+        i = int(node[:coma_indx])
+        j = int(node[coma_indx+1:])
+
+        if min_i > i: min_i = i
+        if min_j > j: min_j = j
+    
+    for node in graph:
+        new_neighbors = copy.deepcopy(graph[node])
+
+        for k in range(4):
+            if new_neighbors[k] == "wall": continue
+            coma_indx = new_neighbors[k].find(',')
+            i = int(new_neighbors[k][:coma_indx]) - min_i
+            j = int(new_neighbors[k][coma_indx+1:]) - min_j
+            new_neighbors[k] = str(i) + ',' + str(j)
+
+        coma_indx = node.find(',')
+        i = int(node[:coma_indx]) - min_i
+        j = int(node[coma_indx+1:]) - min_j
+
+        normalized[str(i) + ',' + str(j)] = new_neighbors
+
+    return normalized
+
 # DFS traversal, uses a global stack to keep backtrack
 # the neighbors are found locally, and are not stored in a DS
+target_visited_nodes = 16
 def traverse():
     flag = False
-    for list in MAZE.grid:
-        if 0 in list: 
-            flag = True
-            break
-    if flag == False: # victory spin :) 
+    ones = sum([i.count(1) for i in MAZE.grid])
+
+    if ones == target_visited_nodes: # all nodes already discovered
+        flag = True
+
+    if flag: # victory spin :) 
+        neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
         setSpeedIPS(-2, 2)
-        print(MAZE.graph)
+        normalized = normalizeGraph(MAZE.graph)
+        for i in range(4):
+            for j in range(4):
+                s = str(i) + ',' + str(j)
+                if s in normalized:
+                    print(f'node: {s} , edges: {normalized[s]}')
+        exit()
         return
 
     n_tiles = neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
     theta = ROBOT_POSE.theta
-    print(n_tiles)
 
     # print(stack)
     # BACK TRACK

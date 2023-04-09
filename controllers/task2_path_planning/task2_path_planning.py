@@ -317,6 +317,23 @@ def rotationInPlace(direction, angle, v):
             
         # ROBOT_POSE.updatePose(MAZE)
         # ROBOT_POSE.printRobotPose(MAZE)
+
+def circularMotion(vr=3, direction="left", R=10, angle=pi/2):
+    omega = vr/(R+dmid)
+    vl = omega*(R-dmid)
+    v = (vr+vl)/2
+    s = (angle) * R
+    time = s/v
+    s_time = robot.getTime()
+    while robot.step(timestep) != -1:
+        if robot.getTime()-s_time > time:
+            setSpeedIPS(0,0)
+            break 
+        setSpeedIPS(0,0)
+        if direction == "right":
+            setSpeedIPS(vr,vl)
+        else:
+            setSpeedIPS(vl,vr)
 ########################## Motion logic ######################## 
 
 def rotateUntilAngle(angle):
@@ -373,17 +390,183 @@ def firstTheta(first, second):
         elif first[1] < second[1]:
             return 0
 
+
+motion_theta = 90
+
+def forwardHelper(a, b, c):
+    if motion_theta == 0:
+        if a[0] == b[0] and a[0] == c[0]:
+            return True
+    elif motion_theta == 90:
+        if a[1] == b[1] and a[1] == c[1]:
+            return True
+    elif motion_theta == 180:
+        if a[0] == b[0] and a[0] == c[0]:
+            return True
+    elif motion_theta == 270:
+        if a[1] == b[1] and a[1] == c[1]:
+            return True
+    return False
+
+# i, j
+def quarterCircleHelper(a, b, c):
+    global motion_theta
+    if motion_theta == 0:
+        # going right
+        if a[0] > c[0]:
+            motion_theta = 270
+            return "ql"
+        else:
+            motion_theta = 90
+            return "qr"
+
+    elif motion_theta == 90:
+        # going up
+        if a[1] > c[1]:
+            motion_theta = 180
+            return "ql"
+        else:
+            motion_theta = 0
+            return "qr"
+        
+    elif motion_theta == 180:
+        # going left
+        if a[0] > c[0]:
+            motion_theta = 90
+            return "qr"
+        else:
+            motion_theta = 270
+            return "ql"
+    elif motion_theta == 270:
+        # going down
+        if a[1] > c[1]:
+            motion_theta = 0
+            return "qr"
+        else:
+            motion_theta = 180
+            return "ql"
+        
+    return False
+
+def halfCircleHelper(a, b, c, d):
+    global motion_theta
+    if motion_theta == 0:
+        # going right
+        if a[0] > c[0]:
+            motion_theta = 270
+            return "ql"
+        else:
+            motion_theta = 90
+            return "qr"
+
+    elif motion_theta == 90:
+        # going up
+        if a[1] > c[1]:
+            motion_theta = 180
+            return "ql"
+        else:
+            motion_theta = 0
+            return "qr"
+        
+    elif motion_theta == 180:
+        # going left
+        if a[0] > c[0]:
+            motion_theta = 90
+            return "qr"
+        else:
+            motion_theta = 270
+            return "ql"
+    elif motion_theta == 270:
+        # going down
+        if a[1] > c[1]:
+            motion_theta = 0
+            return "qr"
+        else:
+            motion_theta = 180
+            return "ql"
+        
+    return False
+
+# f == forward 10, ql = quarter circle left, qr = quarter circle right
+# hl = half circle left, hr = half circle right
+def generateMotions(waypoints):
+    motions = []
+
+    for x in range(len(waypoints)):
+        print(waypoints)
+        length = len(waypoints) 
+        if length <= 0:
+            break
+        elif length == 1:
+            waypoints.pop(0)
+
+        elif length == 2:
+            motions.append("f")
+            waypoints.pop(0)
+            waypoints.pop(0)
+
+        elif length == 3:
+            a = waypoints[0]
+            b = waypoints[1]
+            c = waypoints[2]
+
+            is_forward = forwardHelper(a, b, c)
+            if is_forward:
+                waypoints.pop(0)
+                motions.append("f")
+                continue
+
+            q_circle = quarterCircleHelper(a,b,c)
+            if q_circle != False:
+                motions.append(q_circle)
+                waypoints.pop(0)
+                waypoints.pop(0)
+                continue
+        elif length > 3:
+            a = waypoints[0]
+            b = waypoints[1]
+            c = waypoints[2]
+            d = waypoints[3]
+
+            is_forward = forwardHelper(a, b, c)
+            if is_forward:
+                waypoints.pop(0)
+                motions.append("f")
+                continue
+
+            q_circle = quarterCircleHelper(a,b,c)
+            if q_circle != False:
+                motions.append(q_circle)
+                waypoints.pop(0)
+                waypoints.pop(0)
+                continue
+
+    print(motions)
+    
+
 def pathPlanning(start_node, end_node):
+    global motion_theta
     loadGraph()
     waypoints = bfsToList(MAZE.bfs(start_node, end_node))
-    print(waypoints)
-    new_theta = firstTheta(waypoints[0], waypoints[1])
-    print(new_theta)
-    rotateUntilAngle(new_theta)
-
-
+    # print(waypoints)
+    motion_theta = firstTheta(waypoints[0], waypoints[1])
+    # print(motion_theta)
+    # rotateUntilAngle(motion_theta)
+    generateMotions(waypoints)
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("3,3", "1,1")
+
+    # half circle motions
+    # straightMotionD(5)
+    # circularMotion(vr=3, R=5, angle=pi)
+    # straightMotionD(5)
+
+    # quarter circle motion
+    circularMotion(vr=4, R=10, angle=pi/2)
+    straightMotionD(15)
+
+
+    pathPlanning("0,3", "1,2")
+    # pathPlanning("3,3", "1,1")
     exit()

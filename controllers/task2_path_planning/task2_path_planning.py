@@ -392,7 +392,6 @@ def firstTheta(first, second):
 
 
 motion_theta = 90
-
 def forwardHelper(a, b, c):
     if motion_theta == 0:
         if a[0] == b[0] and a[0] == c[0]:
@@ -414,10 +413,10 @@ def quarterCircleHelper(a, b, c):
     if motion_theta == 0:
         # going right
         if a[0] > c[0]:
-            motion_theta = 270
+            motion_theta = 90
             return "ql"
         else:
-            motion_theta = 90
+            motion_theta = 270
             return "qr"
 
     elif motion_theta == 90:
@@ -440,60 +439,117 @@ def quarterCircleHelper(a, b, c):
     elif motion_theta == 270:
         # going down
         if a[1] > c[1]:
-            motion_theta = 0
+            motion_theta = 180
             return "qr"
         else:
-            motion_theta = 180
+            motion_theta = 0
             return "ql"
         
     return False
 
+# hl, hr
 def halfCircleHelper(a, b, c, d):
     global motion_theta
+
     if motion_theta == 0:
         # going right
         if a[0] > c[0]:
-            motion_theta = 270
-            return "ql"
+            # motion_theta = 90
+            if c[1] > d[1] and c[0] == d[0]:
+                motion_theta = 180
+                return "hl"
         else:
-            motion_theta = 90
-            return "qr"
+            # motion_theta = 270
+            if c[1] > d[1] and c[0] == d[0]:
+                motion_theta = 180
+                return "hr"
 
     elif motion_theta == 90:
         # going up
         if a[1] > c[1]:
-            motion_theta = 180
-            return "ql"
+            # motion_theta = 180
+            if c[0] < d[0] and c[1] == d[1]:
+                motion_theta = 270
+                return "hl"
         else:
-            motion_theta = 0
-            return "qr"
+            if c[0] < d[0] and c[1] == d[1]:
+                motion_theta = 270
+                return "hr"
         
     elif motion_theta == 180:
         # going left
         if a[0] > c[0]:
-            motion_theta = 90
-            return "qr"
+            # motion_theta = 90
+            if c[1] < d[1] and c[0] == d[0]:
+                motion_theta = 0
+                return "hr"
         else:
             motion_theta = 270
-            return "ql"
+            if c[1] < d[1] and c[0] == d[0]:
+                motion_theta = 0
+                return "hl"
+            
     elif motion_theta == 270:
         # going down
         if a[1] > c[1]:
-            motion_theta = 0
-            return "qr"
+            if c[0] > d[0] and c[1] == d[1]:
+                motion_theta = 90
+                return "hr"
         else:
-            motion_theta = 180
-            return "ql"
+            if c[0] > d[0] and c[1] == d[1]:
+                motion_theta = 90
+                return "hl"
         
     return False
 
+
+def rotationHelper(a, b):
+    global motion_theta
+
+    if motion_theta == 0:
+        if a[0] > b[0]:
+            motion_theta = 270
+            return "ir"
+        elif a[0] < b[0]:
+            motion_theta = 90
+            return "il"
+        
+    elif motion_theta == 90:
+        if a[1] > b[1]:
+            motion_theta = 180
+            return "il"
+        elif a[1] < b[1]:
+            motion_theta = 0
+            return "ir"
+        
+    elif motion_theta == 180:
+        if a[0] > b[0]:
+            motion_theta = 270
+            return "il"
+        elif a[0] < b[0]:
+            motion_theta = 90
+            return "ir"
+        
+    elif motion_theta == 270:
+        if a[1] > b[1]:
+            motion_theta = 180
+            return "ir"
+        elif a[1] < b[1]:
+            motion_theta = 0
+            return "il"
+        
+    return False
+
+
+
 # f == forward 10, ql = quarter circle left, qr = quarter circle right
 # hl = half circle left, hr = half circle right
+# il, ir =  rotation in place left or right
 def generateMotions(waypoints):
     motions = []
 
     for x in range(len(waypoints)):
-        print(waypoints)
+        # print(waypoints)
         length = len(waypoints) 
         if length <= 0:
             break
@@ -534,15 +590,56 @@ def generateMotions(waypoints):
                 motions.append("f")
                 continue
 
+            h_circle = halfCircleHelper(a,b,c,d)
+            if h_circle != False:
+                motions.append(h_circle)
+                waypoints.pop(0)
+                waypoints.pop(0)
+                waypoints.pop(0)
+
+                if len(waypoints) >= 2:
+                    rotate = rotationHelper(waypoints[0], waypoints[1])
+                    if rotate != False: motions.append(rotate)
+                continue
+
             q_circle = quarterCircleHelper(a,b,c)
             if q_circle != False:
                 motions.append(q_circle)
                 waypoints.pop(0)
                 waypoints.pop(0)
+
+                if len(waypoints) >= 2:
+                    rotate = rotationHelper(waypoints[0], waypoints[1])
+                    if rotate != False: motions.append(rotate)
                 continue
 
-    print(motions)
-    
+    return motions
+
+# f == forward 10, ql = quarter circle left, qr = quarter circle right
+# hl = half circle left, hr = half circle right
+# il, ir =  rotation in place left or right 
+def runMotions(motions):
+
+    for motion in motions:
+        if motion == "f":
+            straightMotionD(10)
+        elif motion == "ql":
+            circularMotion(vr=4, direction="left", R=10, angle=pi/2)
+        elif motion == "qr":
+            circularMotion(vr=4, direction="right", R=10, angle=pi/2)
+        elif motion == "hl":
+            straightMotionD(5)
+            circularMotion(vr=3, direction="left", R=5, angle=pi)
+            straightMotionD(5)
+        elif motion == "hr":
+            straightMotionD(5)
+            circularMotion(vr=3, direction="right", R=5, angle=pi)
+            straightMotionD(5)
+        elif motion == "il":
+            rotationInPlace('left', pi/2, 0.6)
+        elif motion == "ir":
+            rotationInPlace('right', pi/2, 0.6)
+
 
 def pathPlanning(start_node, end_node):
     global motion_theta
@@ -551,22 +648,14 @@ def pathPlanning(start_node, end_node):
     # print(waypoints)
     motion_theta = firstTheta(waypoints[0], waypoints[1])
     # print(motion_theta)
-    # rotateUntilAngle(motion_theta)
-    generateMotions(waypoints)
+    # Rotate until angle for the first motion
+    rotateUntilAngle(motion_theta)
+    motions = generateMotions(waypoints)
+    print(motions)
+    runMotions(motions) 
 
 # main loop
 while robot.step(timestep) != -1:
-
-    # half circle motions
-    # straightMotionD(5)
-    # circularMotion(vr=3, R=5, angle=pi)
-    # straightMotionD(5)
-
-    # quarter circle motion
-    circularMotion(vr=4, R=10, angle=pi/2)
-    straightMotionD(15)
-
-
-    pathPlanning("0,3", "1,2")
+    pathPlanning("0,0", "3,0")
     # pathPlanning("3,3", "1,1")
     exit()

@@ -180,6 +180,33 @@ class mazeMap:
         j = tile%self.n
         self.grid[i][j] = 1
 
+    def bfs_queue_helper(self, paths, queue, nodes, cur_node):
+        for node in nodes:
+            if node != "wall": queue.append(node)
+            if node not in paths:
+                new_path = copy.deepcopy(paths[cur_node])
+                new_path.append(node)
+                paths[node] = new_path
+
+        return paths, queue 
+
+    def bfs(self, start_node, search_node):
+        visited = [] # visited and path may be the same for bfs, test later!
+        paths = {start_node: [start_node]}
+
+        # attach to path once the node is explored
+        queue = [start_node]
+        # use a list as a queue
+        # pop top of the queue and add neighbors
+        while len(queue) > 0:
+            cur_node = queue.pop(0)
+            if cur_node not in visited:
+                visited.append(cur_node)
+                paths, queue = self.bfs_queue_helper(paths, queue, self.graph[cur_node], cur_node)
+
+            if search_node == cur_node:
+                return paths[search_node]
+
 class RobotPose:
     def __init__(self, x, y, tile, theta):
         self.x = x
@@ -189,7 +216,6 @@ class RobotPose:
 
     #print the grid & robot pose
     def printRobotPose(self, maze):
-        return
         print(f'x: {self.x:.2f}\ty: {self.y:.2f}\ttile: {self.tile}\ttheta: {self.theta:.2f}')
         for list in maze.grid:
             print("\t" + str(list))
@@ -356,12 +382,12 @@ def neighTiles(tile, theta=90):
         if valid_walls[i] == False:
             cur_node_neigh[i] = "wall"
             valid_neigh[i] = False
-
-    print(valid_walls)
-    print("-------------------------")
-    print(valid_neigh)
-    print(".")
-    print(".")
+    #debug
+    # print(valid_walls)
+    # print("-------------------------")
+    # print(valid_neigh)
+    # print(".")
+    # print(".")
 
     for neigh in cur_node_neigh:
         if neigh == "wall": continue
@@ -480,14 +506,17 @@ def traverse():
     if flag: # victory spin :) 
         neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
         setSpeedIPS(-2, 2)
-        normalized = normalizeGraph(MAZE.graph)
+
+        MAZE.graph = normalizeGraph(MAZE.graph)
+        
         for i in range(4):
             for j in range(4):
                 s = str(i) + ',' + str(j)
-                if s in normalized:
-                    print(f'node: {s} , edges: {normalized[s]}')
+                if s in MAZE.graph:
+                    print(f'node: {s} , edges: {MAZE.graph[s]}')
+
+        print(MAZE.bfs("0,0", "1,0"))
         exit()
-        return
 
     n_tiles = neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
     theta = ROBOT_POSE.theta

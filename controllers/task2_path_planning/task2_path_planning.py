@@ -646,8 +646,7 @@ def pathPlanning(start_node, end_node):
     loadGraph()
     waypoints = bfsToList(MAZE.bfs(start_node, end_node))
 
-    print(f'Start node:\t{start_node}')
-    print(f'End node:\t{end_node}')
+    print(f'Start node: {start_node}\t End node: {end_node}')
     print(f'BFS path: {waypoints}')
     motion_theta = firstTheta(waypoints[0], waypoints[1])
     # print(motion_theta)

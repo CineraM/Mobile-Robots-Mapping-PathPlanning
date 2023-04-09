@@ -3,8 +3,7 @@
 from controller import Robot
 # import numpy as it may be used in future labs
 import numpy as np
-import math
-import copy
+import math, copy, json, os
 #######################################################
 # Creates Robot
 #######################################################
@@ -143,22 +142,27 @@ class mazeMap:
         self.graph = graph
         self.grid = grid
 
-    # code that generates the 4 points for all tiles, 16 tiles
+    # code that generates the 4 points for all tiles, n*n tiles
     # generates top left, top right, bottom left, bottom right points of an nxn grid
-    def generateTiles(self):
-        y = 20
+    def generateTiles(self, top_left=20, step=10):
+        y = top_left
         for i in range(self.n):
-            x = -20
+            x = -top_left
             for j in range(self.n):
-                self.tiles.append([[x, y], [x+10, y], [x, y-10], [x+10, y-10]])
-                x+=10
-            y-=10
+                self.tiles.append([[x, y], [x+step, y], [x, y-step], [x+step, y-step]])
+                x+=step
+            y-=step
 
     # bottom left, top right, robot
     def updateTile(self, pose):
         # up, down, left, right instead looking though all the tiles
-        # the search space is extremly small, this will not affect performance
-        for i in range(len(self.tiles)):
+        
+        cur_tile = pose.tile-1
+        n = MAZE.n
+        # up, left, right, down
+        possible_tiles = [cur_tile-n, cur_tile-1, cur_tile+1, cur_tile+n]
+        
+        for i in possible_tiles:
             tl = self.tiles[i][0]
             br = self.tiles[i][3]
             x, y = pose.x, pose.y
@@ -167,6 +171,18 @@ class mazeMap:
                 if y < tl[1] and y > br[1]:
                     return i+1
         return -1
+    # the search space is extremly small, this will not affect performance 8x8
+    # exaustive search just in case 
+        # for i in range(len(self.tiles)):
+        #     tl = self.tiles[i][0]
+        #     br = self.tiles[i][3]
+        #     x, y = pose.x, pose.y
+
+        #     if x > tl[0] and x < br[0]:
+        #         if y < tl[1] and y > br[1]:
+        #             print(i)
+        #             return i+1
+        # return -1
     
     def generateGrid(self):
         for i in range(self.n):
@@ -257,7 +273,7 @@ MAZE.generateGrid()
 ROBOT_POSE = RobotPose(15.0, -25.0, 36, 90)
 MAZE.updateGrid(ROBOT_POSE.tile-1)
 
-################ motion functions #####################
+########################## Motion logic ######################## 
 # 5.024 = max speed in in per second
 def straightMotionD(d):
     v = 5.024
@@ -301,9 +317,11 @@ def rotationInPlace(direction, angle, v):
             
         ROBOT_POSE.updatePose(MAZE)
         ROBOT_POSE.printRobotPose(MAZE)
-################ motion functions #####################
+########################## Motion logic ######################## 
 
-############## traversal logic ############
+
+
+########################## traversal logic ######################## 
 # return True if there is no wall in any of the 4 directions (90, 180, 0, 270)
 # False if there is a wall
 # basically returns the valid edges in a graph
@@ -514,8 +532,13 @@ def traverse():
                 s = str(i) + ',' + str(j)
                 if s in MAZE.graph:
                     print(f'node: {s} , edges: {MAZE.graph[s]}')
-
-        print(MAZE.bfs("0,0", "1,0"))
+        
+        path = os.getcwd()
+        path = os.path.dirname(path) + "/graph.json" 
+        print("Saving graph to: ", path)
+        with open(path, "w") as fp:
+            json.dump(MAZE.graph, fp)
+        # print(MAZE.bfs("0,0", "1,0"))
         exit()
 
     n_tiles = neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
@@ -552,8 +575,6 @@ def traverse():
             traversalStrightHelper()
         else:
             traversalRotationtHelper(theta, n_tiles)
-############## traversal logic ############
-
 
 def rotateUntilAngle(angle):
     while robot.step(timestep) != -1:

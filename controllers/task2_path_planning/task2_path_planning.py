@@ -640,6 +640,10 @@ def runMotions(motions):
         elif motion == "ir":
             rotationInPlace('right', pi/2, 0.6)
 
+def spin():
+    while robot.step(timestep) != -1:
+        setSpeedIPS(-2, 2)
+
 
 def pathPlanning(start_node, end_node):
     global motion_theta
@@ -656,11 +660,9 @@ def pathPlanning(start_node, end_node):
     motions = generateMotions(waypoints)
     # print(motions)
     runMotions(motions)
+    print(f'Goal Node Found: {robot.getTime():.2f}s')
     spin()
 
-def spin():
-    while robot.step(timestep) != -1:
-        setSpeedIPS(-2, 2)
 
 # main loop
 while robot.step(timestep) != -1:

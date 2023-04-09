@@ -511,6 +511,10 @@ def normalizeGraph(graph):
 
     return normalized
 
+def spin():
+    while robot.step(timestep) != -1:
+        setSpeedIPS(-2, 2)
+
 # DFS traversal, uses a global stack to keep backtrack
 # the neighbors are found locally, and are not stored in a DS
 target_visited_nodes = 16
@@ -521,7 +525,8 @@ def traverse():
     if ones == target_visited_nodes: # all nodes already discovered
         flag = True
 
-    if flag: # victory spin :) 
+    if flag: # all nodes found
+        print(f'DFS completion time: {robot.getTime():.2f}s')
         neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
         setSpeedIPS(-2, 2)
 
@@ -538,8 +543,8 @@ def traverse():
         print("Saving graph to: ", path)
         with open(path, "w") as fp:
             json.dump(MAZE.graph, fp)
-        # print(MAZE.bfs("0,0", "1,0"))
-        exit()
+
+        spin()
 
     n_tiles = neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
     theta = ROBOT_POSE.theta

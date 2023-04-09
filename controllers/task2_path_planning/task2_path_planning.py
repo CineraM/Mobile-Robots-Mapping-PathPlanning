@@ -360,7 +360,7 @@ def loadGraph():
     with open(path, "r") as fp:
         MAZE.graph = json.load(fp)
     print("Graph successfully loaded!")
-    print("Graph contents: ")
+    print("Graph contents: (Edges format: Up, Left, Right, Down)")
     for i in range(4):
         for j in range(4):
             s = str(i) + ',' + str(j)
@@ -645,17 +645,26 @@ def pathPlanning(start_node, end_node):
     global motion_theta
     loadGraph()
     waypoints = bfsToList(MAZE.bfs(start_node, end_node))
-    # print(waypoints)
+
+    print(f'Start node:\t{start_node}')
+    print(f'End node:\t{end_node}')
+    print(f'BFS path: {waypoints}')
     motion_theta = firstTheta(waypoints[0], waypoints[1])
     # print(motion_theta)
-    # Rotate until angle for the first motion
+    
+    print(f'Rotating until {motion_theta} degrees...')
     rotateUntilAngle(motion_theta)
     motions = generateMotions(waypoints)
-    print(motions)
-    runMotions(motions) 
+    # print(motions)
+    runMotions(motions)
+    spin()
+
+def spin():
+    while robot.step(timestep) != -1:
+        setSpeedIPS(-2, 2)
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("0,0", "3,0")
+    pathPlanning("3,3", "1,1")
     # pathPlanning("3,3", "1,1")
     exit()

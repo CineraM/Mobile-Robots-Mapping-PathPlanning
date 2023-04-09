@@ -657,10 +657,11 @@ def pathPlanning(start_node, end_node):
     
     print(f'Rotating until {motion_theta} degrees...')
     rotateUntilAngle(motion_theta)
+    start_time = robot.getTime()
     motions = generateMotions(waypoints)
     # print(motions)
     runMotions(motions)
-    print(f'Goal Node Found: {robot.getTime():.2f}s')
+    print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
     spin()
 
 

@@ -21,7 +21,7 @@ TexturedBackgroundLight {
 DEF epuck E-puck {
   translation 0.375 -0.375 -6.391454876127252e-05
   rotation 0 0 1 1.57
-  controller "task1_wall_mapping"
+  controller "task2_path_planning"
   supervisor TRUE
   turretSlot [
     Lidar {

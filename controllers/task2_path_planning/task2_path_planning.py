@@ -635,13 +635,13 @@ def generateMotions(waypoints):
         
     return motions
 
-
 # f == forward 10, ql = quarter circle left, qr = quarter circle right
 # hl = half circle left, hr = half circle right
 # il, ir =  rotation in place left or right 
 def runMotions(motions):
 
-    for motion in motions:
+    for m in motions:
+        motion = m[1]
         if motion == "f":
             straightMotionD(10)
         elif motion == "ql":
@@ -680,7 +680,7 @@ def pathPlanning(start_node, end_node):
     rotateUntilAngle(motion_theta)
     start_time = robot.getTime()
     motions = generateMotions(waypoints)
-    # print(motions)
+    print(motions)
     runMotions(motions)
     print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
     spin()

@@ -275,65 +275,133 @@ MAZE.updateGrid(ROBOT_POSE.tile-1)
 
 ########################## Motion logic ######################## 
 # 5.024 = max speed in in per second
-def straightMotionD(d):
-    v = 5.024
+def straightMotionD(D):
+    V=5.024
     is_neg = False
-    if d < 0:
+    if D < 0:
         is_neg = True
-        d = abs(d)
+        D = abs(D)
 
-    time = d/v  # 5.024 = v*r ==> max linear speed
-    s_time = robot.getTime()
+    start_position = getPositionSensors()[0]
+    # Calculates velocity of each motor and the robot
+    phi = V / w_r                # rad/sec
+
+    if is_neg:
+        setSpeedIPS(-phi*w_r, -phi*w_r)
+    else:
+        setSpeedIPS(phi*w_r, phi*w_r)
     while robot.step(timestep) != -1:
-        if robot.getTime()-s_time > time:
-            setSpeedIPS(0,0)
+        # Checks if wheel distance is larger than D
+        if w_r*abs(getPositionSensors()[0] - start_position) >= D-0.01:
+            setSpeedIPS(0, 0)
             # ROBOT_POSE.updatePose(MAZE)
             # ROBOT_POSE.printRobotPose(MAZE)
             break
-        if is_neg:
-            setSpeedIPS(-v, -v)
-        else:
-            setSpeedIPS(v, v)
+
         # ROBOT_POSE.updatePose(MAZE)
         # ROBOT_POSE.printRobotPose(MAZE)
 
 # assume angle is in radians
-def rotationInPlace(direction, angle, v):
-    s = angle*dmid
-    time = s/v
-    s_time = robot.getTime()
+def rotationInPlace(direction, degree):
+    # Determines Rotation and sets proper speeds
+    if direction == "left":
+        degree *= -1
+
+    if degree < 0 :
+        sign = -1
+    else:
+        sign = 1
+        
+    X_rad = math.radians(degree)
+    phi = sign*2 # defualt 2
+
+    # Calculates time need for rotation
+    omega = 2*abs(phi)*w_r / distBtwWhe
+    T = abs(X_rad / omega)
+    # end_heading = (predicted_pose[3] - degree)%360
+
+    t_start = robot.getTime()
+
+
+    setSpeedIPS(phi*w_r, -phi*w_r)
+
+    starting_theta = round(imuCleaner(imu.getRollPitchYaw()[2]))
+    end_heading = round((starting_theta - degree)%360,2)
+
+    marg_error = .01
 
     while robot.step(timestep) != -1:
-        if robot.getTime()-s_time > time:
-            leftMotor.setVelocity(0)
-            rightMotor.setVelocity(0)
-            # ROBOT_POSE.updatePose(MAZE)
-            # ROBOT_POSE.printRobotPose(MAZE)
-            break 
-        if direction == "left":
-            setSpeedIPS(-v, v)
-        else:
-            setSpeedIPS(v, -v)
-            
+        current_heading = imuCleaner(imu.getRollPitchYaw()[2])
+        east_flag = True if end_heading <= 4 or end_heading >= 356 else False
+        if (robot.getTime() - t_start) >= T:
+
+            if east_flag:
+                current_heading = current_heading - 360 if current_heading > 355 else current_heading
+            if current_heading > (end_heading+marg_error):
+                setSpeedIPS(.01, -.01)
+            elif current_heading < (end_heading-marg_error):
+                setSpeedIPS(-.01, .01)
+            else:
+                setSpeedIPS(0,0)
+                # ROBOT_POSE.updatePose(MAZE)
+                # ROBOT_POSE.printRobotPose(MAZE)
+                break
+
         # ROBOT_POSE.updatePose(MAZE)
         # ROBOT_POSE.printRobotPose(MAZE)
 
-def circularMotion(vr=3, direction="left", R=10, angle=pi/2):
-    omega = vr/(R+dmid)
-    vl = omega*(R-dmid)
-    v = (vr+vl)/2
-    s = (angle) * R
-    time = s/v
-    s_time = robot.getTime()
+def circleR(R,V=4,direction='right',percent = 1):
+    # Determines direction and sets proper speeds
+    axel_length = distBtwWhe
+    wheel_radius = w_r
+    omega = V/abs(R)
+    if R < 0 :
+        sign = -1
+    else:
+        sign = 1
+
+    # Right and Clockwise
+    if direction == 'right' and sign > 0:
+        vl = omega*(abs(R) + sign*(axel_length/2))
+        vr = omega*(abs(R) - sign*(axel_length/2))
+        D = 2*math.pi*(abs(R) + sign*(axel_length/2))
+    # Right and Counter Clockwise
+    elif direction == 'right' and sign < 0:
+        vl = -omega*(abs(R) - sign*(axel_length/2))
+        vr = -omega*(abs(R) + sign*(axel_length/2))
+        D = 2*math.pi*(abs(R) - sign*(axel_length/2))
+    # Left and Clockwise
+    elif direction == 'left' and sign > 0:
+        vl = -omega*(abs(R) - sign*(axel_length/2))
+        vr = -omega*(abs(R) + sign*(axel_length/2))
+        D = 2*math.pi*(abs(R) - sign*(axel_length/2))
+    # Left and Counter Clockwise
+    elif direction == 'left' and sign < 0:
+        vl = omega*(abs(R) + sign*(axel_length/2))
+        vr = omega*(abs(R) - sign*(axel_length/2))
+        D = 2*math.pi*(abs(R) + sign*(axel_length/2))
+
+    D = D*percent
+    phi_l = vl/wheel_radius
+    phi_r = vr/wheel_radius
+
+    # Checks to see if speed is to high 
+    if abs(phi_l) > leftMotor.getMaxVelocity() or abs(phi_r) > rightMotor.getMaxVelocity():
+        print("Speed is too great for robot")
+        return
+
+    # Gets starting postion of left wheel encoder to use as a stoping condition
+    start_position = leftposition_sensor.getValue()
+    # Sets motor speeds and sets start time
+    leftMotor.setVelocity(phi_l)
+    rightMotor.setVelocity(phi_r)
+
     while robot.step(timestep) != -1:
-        if robot.getTime()-s_time > time:
-            setSpeedIPS(0,0)
-            break 
-        setSpeedIPS(0,0)
-        if direction == "right":
-            setSpeedIPS(vr,vl)
-        else:
-            setSpeedIPS(vl,vr)
+    # Checks if wheel distance is larger than D
+        if wheel_radius*abs(leftposition_sensor.getValue() - start_position) >= D-0.02:
+            leftMotor.setVelocity(0)
+            rightMotor.setVelocity(0)
+            break
 ########################## Motion logic ######################## 
 
 def rotateUntilAngle(angle):
@@ -389,7 +457,6 @@ def firstTheta(first, second):
             return 180
         elif first[1] < second[1]:
             return 0
-
 
 motion_theta = 90
 def forwardHelper(a, b, c):
@@ -456,14 +523,11 @@ def halfCircleHelper(a, b, c, d):
 
     if motion_theta == 0:
         # going right
-
         if a[0] > c[0]:
-            # motion_theta = 90
             if c[1] > d[1] and c[0] == d[0]:
                 motion_theta = 180
                 return "hl"
         else:
-            # motion_theta = 270
             if c[1] > d[1] and c[0] == d[0]:
                 motion_theta = 180
                 return "hr"
@@ -471,7 +535,6 @@ def halfCircleHelper(a, b, c, d):
     elif motion_theta == 90:
         # going up
         if a[1] > c[1]:
-            # motion_theta = 180
             if c[0] < d[0] and c[1] == d[1]:
                 motion_theta = 270
                 return "hl"
@@ -483,12 +546,10 @@ def halfCircleHelper(a, b, c, d):
     elif motion_theta == 180:
         # going left
         if a[0] > c[0]:
-            # motion_theta = 90
             if c[1] < d[1] and c[0] == d[0]:
                 motion_theta = 0
                 return "hr"
         else:
-            # motion_theta = 270
             if c[1] < d[1] and c[0] == d[0]:
                 motion_theta = 0
                 return "hl"
@@ -545,8 +606,6 @@ def rotationHelper(a, b):
         
     return False
 
-
-
 # f == forward 10, ql = quarter circle left, qr = quarter circle right
 # hl = half circle left, hr = half circle right
 # il, ir =  rotation in place left or right
@@ -555,7 +614,6 @@ def generateMotions(waypoints):
     motions = []
 
     for x in range(len(waypoints)):
-        # print("--------------------------------------------------")
         length = len(waypoints) 
         if length <= 0:
             break
@@ -593,18 +651,12 @@ def generateMotions(waypoints):
 
             is_forward = forwardHelper(a, b, c)
             if is_forward:
-                # print(f'points: {a}, {b}, {c}, {d}')
-                # print(f'cur: {motion_theta}, motion: f')
-
                 waypoints.pop(0)
                 motions.append([motion_theta,"f"])
                 continue
 
             h_circle = halfCircleHelper(a,b,c,d)
             if h_circle == "hl" or h_circle == "hr":
-                # print(f'points: {a}, {b}, {c}, {d}')
-                # print(f'prev: cur: {motion_theta}, motion: {h_circle}')
-
                 motions.append([motion_theta,h_circle])
                 waypoints.pop(0)
                 waypoints.pop(0)
@@ -614,80 +666,89 @@ def generateMotions(waypoints):
                     rotate = rotationHelper(waypoints[0], waypoints[1])
                     if rotate != False: 
                         motions.append([motion_theta, rotate])
-                        # print(f'cur: {motion_theta}, motion: {rotate}')
                 continue
 
             q_circle = quarterCircleHelper(a,b,c)
             if q_circle == "ql" or q_circle == "qr":
-                # print(f'points: {a}, {b}, {c}, {d}')
-                # print(f'cur: {motion_theta}, motion: {q_circle}')
                 motions.append([motion_theta,q_circle])
                 waypoints.pop(0)
                 waypoints.pop(0)
 
                 if len(waypoints) >= 2:
-                    # print(f'points: {waypoints[0]}, { waypoints[1]}')
                     rotate = rotationHelper(waypoints[0], waypoints[1])
                     if rotate != False: 
                         motions.append([motion_theta, rotate])
-                        # print(f'cur: {motion_theta}, motion: {rotate}')
                 continue
         
     return motions
 
-# f == forward 10, ql = quarter circle left, qr = quarter circle right
-# hl = half circle left, hr = half circle right
-# il, ir =  rotation in place left or right 
 def runMotions(motions):
-
+    rotating_angle = 90
+    distance = 10
+    print("Running motions...")
     for m in motions:
+        # print(m)
         motion = m[1]
         if motion == "f":
-            straightMotionD(10)
+            print("-  Forward 10in")
+            straightMotionD(distance)
         elif motion == "ql":
-            circularMotion(vr=4, direction="left", R=10, angle=pi/2)
+            print("-  π/2 Left circular motion, R=10in")
+            circleR(R=-distance, V=1.5, direction="left", percent=0.25)
         elif motion == "qr":
-            circularMotion(vr=4, direction="right", R=10, angle=pi/2)
+            print("-  π/2 Right circular motion, R=10in")
+            circleR(R=distance, V=1.5, direction="right", percent=0.25)
         elif motion == "hl":
-            straightMotionD(5)
-            circularMotion(vr=3, direction="left", R=5, angle=pi)
-            straightMotionD(5)
+            print("-  Forward 5in")
+            straightMotionD(distance/2)
+            print("-  π Left circular motion, R=5in")
+            circleR(R=-distance/2, V=1.5, direction="left", percent=0.5)
+            print("-  Forward 5in")
+            straightMotionD(distance/2)
         elif motion == "hr":
-            straightMotionD(5)
-            circularMotion(vr=3, direction="right", R=5, angle=pi)
-            straightMotionD(5)
+            print("-  Forward 5in")
+            straightMotionD(distance/2)
+            print("-  π Right circular motion, R=5in")
+            circleR(R=distance/2, V=1.5, direction="right", percent=0.5)
+            print("-  Forward 5in")
+            straightMotionD(distance/2)
         elif motion == "il":
-            rotationInPlace('left', pi/2, 0.6)
+            print("-  π/2 Left Rotation-in-Place")
+            rotationInPlace('left', rotating_angle)
         elif motion == "ir":
-            rotationInPlace('right', pi/2, 0.6)
+            print("-  π/2 Right Rotation-in-Place")
+            rotationInPlace('right', rotating_angle)
+        else:
+            straightMotionD(0)
 
 def spin():
     while robot.step(timestep) != -1:
         setSpeedIPS(-2, 2)
-
 
 def pathPlanning(start_node, end_node):
     global motion_theta
     loadGraph()
     waypoints = bfsToList(MAZE.bfs(start_node, end_node))
 
-    print(f'Start node: {start_node}\t End node: {end_node}')
-    print(f'BFS path: {waypoints}')
     motion_theta = firstTheta(waypoints[0], waypoints[1])
-    # print(motion_theta)
-    
-    print(f'Rotating until {motion_theta} degrees...')
     rotateUntilAngle(motion_theta)
+    print("Rotating until angle = " + str(motion_theta))
+
+    print(f'Start node:\t\t{waypoints[0]}')
+    print(f'End node:\t\t{waypoints[len(waypoints)-1]}')
+    print(f'# of nodes:\t\t{len(waypoints)}')
+    
+    motion_theta = firstTheta(waypoints[0], waypoints[1])
+
     start_time = robot.getTime()
     motions = generateMotions(waypoints)
-    print(motions)
+    
     runMotions(motions)
     print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
-    spin()
 
+    print("sping :)")
+    spin()
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("3,3", "2,1")
-    # pathPlanning("3,3", "1,1")
-    exit()
+    pathPlanning("3,3", "1,1")

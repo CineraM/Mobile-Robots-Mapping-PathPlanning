@@ -322,7 +322,6 @@ def rotationInPlace(direction, degree):
 
     t_start = robot.getTime()
 
-
     setSpeedIPS(phi*w_r, -phi*w_r)
 
     starting_theta = round(imuCleaner(imu.getRollPitchYaw()[2]))
@@ -687,29 +686,29 @@ def runMotions(motions):
     distance = 10
     print("Running motions...")
     for m in motions:
-        # print(m)
+        circleV = 2.0
         motion = m[1]
         if motion == "f":
             print("-  Forward 10in")
             straightMotionD(distance)
         elif motion == "ql":
             print("-  π/2 Left circular motion, R=10in")
-            circleR(R=-distance, V=1.5, direction="left", percent=0.25)
+            circleR(R=-distance, V=circleV, direction="left", percent=0.25)
         elif motion == "qr":
             print("-  π/2 Right circular motion, R=10in")
-            circleR(R=distance, V=1.5, direction="right", percent=0.25)
+            circleR(R=distance, V=circleV, direction="right", percent=0.25)
         elif motion == "hl":
             print("-  Forward 5in")
             straightMotionD(distance/2)
             print("-  π Left circular motion, R=5in")
-            circleR(R=-distance/2, V=1.5, direction="left", percent=0.5)
+            circleR(R=-distance/2, V=circleV, direction="left", percent=0.5)
             print("-  Forward 5in")
             straightMotionD(distance/2)
         elif motion == "hr":
             print("-  Forward 5in")
             straightMotionD(distance/2)
             print("-  π Right circular motion, R=5in")
-            circleR(R=distance/2, V=1.5, direction="right", percent=0.5)
+            circleR(R=distance/2, V=circleV, direction="right", percent=0.5)
             print("-  Forward 5in")
             straightMotionD(distance/2)
         elif motion == "il":
@@ -751,4 +750,4 @@ def pathPlanning(start_node, end_node):
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("3,3", "1,1")
+    pathPlanning("3,3", "0,0")

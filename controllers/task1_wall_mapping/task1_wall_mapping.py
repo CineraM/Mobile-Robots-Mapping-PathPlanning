@@ -228,7 +228,7 @@ class RobotPose:
     # Update pose of robot and grid, updates if a tile is found
     def updatePose(self, MAZE):
         global prev_l, prev_r
-        # self.printRobotPose(MAZE)
+        self.printRobotPose(MAZE)
         cur_l, cur_r = getPositionSensors()
         vl = (cur_l-prev_l)/0.032   # 32 ms 
         vr = (cur_r-prev_r)/0.032
@@ -262,28 +262,6 @@ ROBOT_POSE = RobotPose(15.0, -25.0, 36, 90)
 MAZE.updateGrid(ROBOT_POSE.tile-1)
 
 ########################## Motion logic ######################## 
-# 5.024 = max speed in in per second
-# def straightMotionD(d):
-#     v = 5.024
-#     is_neg = False
-#     if d < 0:
-#         is_neg = True
-#         d = abs(d)
-
-#     time = d/v  # 5.024 = v*r ==> max linear speed
-#     s_time = robot.getTime()
-#     while robot.step(timestep) != -1:
-#         if robot.getTime()-s_time > time:
-#             setSpeedIPS(0,0)
-#             ROBOT_POSE.updatePose(MAZE)
-#             ROBOT_POSE.printRobotPose(MAZE)
-#             break
-#         if is_neg:
-#             setSpeedIPS(-v, -v)
-#         else:
-#             setSpeedIPS(v, v)
-#         ROBOT_POSE.updatePose(MAZE)
-#         ROBOT_POSE.printRobotPose(MAZE)
 
 def straightMotionD(D):
     V=5.024
@@ -308,28 +286,6 @@ def straightMotionD(D):
 
         ROBOT_POSE.updatePose(MAZE)
 
-# assume angle is in radians
-# def rotationInPlace(direction, angle, v):
-#     s = angle*dmid
-#     time = s/v
-#     s_time = robot.getTime()
-
-#     while robot.step(timestep) != -1:
-#         if robot.getTime()-s_time > time:
-#             leftMotor.setVelocity(0)
-#             rightMotor.setVelocity(0)
-#             ROBOT_POSE.updatePose(MAZE)
-#             # ROBOT_POSE.printRobotPose(MAZE)
-#             break 
-#         if direction == "left":
-#             setSpeedIPS(-v, v)
-#         else:
-#             setSpeedIPS(v, -v)
-            
-#         ROBOT_POSE.updatePose(MAZE)
-        # ROBOT_POSE.printRobotPose(MAZE)
-
-
 def rotationInPlace(direction, degree, v):
     # Determines Rotation and sets proper speeds
     if direction == "left":
@@ -349,7 +305,6 @@ def rotationInPlace(direction, degree, v):
     # end_heading = (predicted_pose[3] - degree)%360
 
     t_start = robot.getTime()
-
 
     setSpeedIPS(phi*w_r, -phi*w_r)
 
@@ -607,8 +562,6 @@ def traverse():
 
     n_tiles = neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
     theta = ROBOT_POSE.theta
-
-    print(ROBOT_POSE.printRobotPose(MAZE))
 
     # print(stack)
     # BACK TRACK

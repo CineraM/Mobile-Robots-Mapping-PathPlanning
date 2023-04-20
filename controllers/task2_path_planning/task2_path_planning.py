@@ -222,6 +222,35 @@ class mazeMap:
 
             if search_node == cur_node:
                 return paths[search_node]
+            
+    def wfp_bfs_queue_helper(self, paths, queue, nodes, cur_node, node_weights):
+        for node in nodes:
+            if node != "wall": queue.append(node)
+            if node not in paths:
+                node_weights[node] = len(paths[cur_node]) # wave front planner stuff
+                new_path = copy.deepcopy(paths[cur_node])
+                new_path.append(node)
+                paths[node] = new_path
+
+        return paths, queue 
+
+    def wfp_bfs(self, start_node, search_node):
+        visited = [] # visited and path may be the same for bfs, test later!
+        paths = {start_node: [start_node]}
+
+        # attach to path once the node is explored
+        queue = [start_node]
+        # use a list as a queue
+        # pop top of the queue and add neighbors
+        node_weights = {}
+        node_weights[start_node] = 0
+        while len(queue) > 0:
+            cur_node = queue.pop(0)
+            if cur_node not in visited:
+                visited.append(cur_node)
+                paths, queue = self.wfp_bfs_queue_helper(paths, queue, self.graph[cur_node], cur_node, node_weights)
+
+        return paths[search_node], node_weights
 
 class RobotPose:
     def __init__(self, x, y, tile, theta):
@@ -724,18 +753,69 @@ def spin():
     while robot.step(timestep) != -1:
         setSpeedIPS(-2, 2)
 
+
+def printWFP(graph, wpfVals):
+
+    print("Wave-Front Planner")
+
+    n = 4
+    for i in range(n):
+        print("\t", end="  ") 
+        for j in range(n):
+
+            s = str(i) + ',' + str(j)
+            neighbors = graph[s]
+
+            if neighbors[0] == 'wall':
+                print("─", end="  ")
+            else:
+                print("", end="   ")
+        print("")
+
+        for j in range(n):
+
+            if j == 0: print("\t|", end="")
+
+            s = str(i) + ',' + str(j)
+            neighbors = graph[s]
+            if neighbors[2] == 'wall':
+                print(f' {wpfVals[s]}|', end="")
+            else:
+                print(f' {wpfVals[s]} ', end="")
+                
+        print("")
+
+    print("\t  ─  ─  ─  ─")
+
+def nodesToTiles(path):
+    ret = []
+
+    for node in path:
+        coma_indx = node.find(',')
+        i = int(node[:coma_indx])
+        j = int(node[coma_indx+1:])
+
+        ret.append(i*4 + j + 1)
+
+    return ret
+
 def pathPlanning(start_node, end_node):
     global motion_theta
     loadGraph()
-    waypoints = bfsToList(MAZE.bfs(start_node, end_node))
+
+    path, wfp_vals = MAZE.wfp_bfs(start_node, end_node)
+    printWFP(MAZE.graph, wfp_vals)
+    
+    waypoints = bfsToList(path)
 
     motion_theta = firstTheta(waypoints[0], waypoints[1])
     rotateUntilAngle(motion_theta)
-    print("Rotating until angle = " + str(motion_theta))
 
-    print(f'Start node:\t\t{waypoints[0]}')
-    print(f'End node:\t\t{waypoints[len(waypoints)-1]}')
-    print(f'# of nodes:\t\t{len(waypoints)}')
+    print("Wave-Front Planner path: " + str(nodesToTiles(path)))
+    # print("Rotating until angle = " + str(motion_theta))
+    # print(f'Start node:\t\t{waypoints[0]}')
+    # print(f'End node:\t\t{waypoints[len(waypoints)-1]}')
+    # print(f'# of nodes:\t\t{len(waypoints)}')
     
     motion_theta = firstTheta(waypoints[0], waypoints[1])
 
@@ -750,4 +830,4 @@ def pathPlanning(start_node, end_node):
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("3,3", "0,0")
+    pathPlanning("2,2", "3,3")

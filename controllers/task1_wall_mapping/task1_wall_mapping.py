@@ -210,7 +210,6 @@ class mazeMap:
 
             if search_node == cur_node:
                 return paths[search_node]
-
 class RobotPose:
     def __init__(self, x, y, tile, theta):
         self.x = x

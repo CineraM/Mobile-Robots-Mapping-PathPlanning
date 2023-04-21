@@ -133,6 +133,7 @@ pi = math.pi
 half_of_robot = 0.037*39.3701 
 toIn = 39.3701
 prev_l, prev_r = getPositionSensors()
+mappingbool = True
 #########################################################
 # Robot and Maze classes
 class mazeMap:
@@ -145,6 +146,7 @@ class mazeMap:
     # code that generates the 4 points for all tiles, 16 tiles
     # generates top left, top right, bottom left, bottom right points of an nxn grid
     def generateTiles(self):
+        self.tiles = []
         y = 20
         for i in range(self.n):
             x = -20
@@ -163,28 +165,20 @@ class mazeMap:
         possible_tiles = [cur_tile-n, cur_tile-1, cur_tile+1, cur_tile+n]
         
         for i in possible_tiles:
-            tl = self.tiles[i][0]
-            br = self.tiles[i][3]
+            try:
+                tl = self.tiles[i][0]
+                br = self.tiles[i][3]
+            except:
+                continue
             x, y = pose.x, pose.y
 
             if x > tl[0] and x < br[0]:
                 if y < tl[1] and y > br[1]:
                     return i+1
         return -1
-    # the search space is extremly small, this will not affect performance 8x8
-    # exaustive search just in case 
-        # for i in range(len(self.tiles)):
-        #     tl = self.tiles[i][0]
-        #     br = self.tiles[i][3]
-        #     x, y = pose.x, pose.y
-
-        #     if x > tl[0] and x < br[0]:
-        #         if y < tl[1] and y > br[1]:
-        #             print(i)
-        #             return i+1
-        # return -1
     
     def generateGrid(self):
+        self.grid = []
         for i in range(self.n):
             temp = [] 
             for j in range(self.n):
@@ -268,8 +262,8 @@ class RobotPose:
 
     # Update pose of robot and grid, updates if a tile is found
     def updatePose(self, MAZE):
-        global prev_l, prev_r
-        self.printRobotPose(MAZE)
+        global prev_l, prev_r, mappingbool
+        if mappingbool: self.printRobotPose(MAZE)
         cur_l, cur_r = getPositionSensors()
         vl = (cur_l-prev_l)/0.032   # 32 ms 
         vr = (cur_r-prev_r)/0.032
@@ -302,6 +296,255 @@ MAZE.generateGrid()
 ROBOT_POSE = RobotPose(15.0, -25.0, 36, 90)
 MAZE.updateGrid(ROBOT_POSE.tile-1)
 
+# return True if there is no wall in any of the 4 directions (90, 180, 0, 270)
+# False if there is a wall
+# basically returns the valid edges in a graph
+def checkWalls(theta):
+    # front, left, right, back
+    lidar = getLidar()
+    no_wall = []
+    for lid in lidar:
+        if lid < 6:
+            no_wall.append(False)
+        else:
+            no_wall.append(True)
+    
+    if theta < 94 and theta > 86:
+        return no_wall 
+    elif theta < 184 and theta > 176:
+        return [no_wall[2], no_wall[0], no_wall[3], no_wall[1]]
+    elif theta < 274 and theta > 266:
+        return [no_wall[3], no_wall[2], no_wall[1], no_wall[0]]
+    elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
+        return [no_wall[1], no_wall[3], no_wall[0], no_wall[2]]
+
+# forward, left, right, backward
+# check if there are walls
+def neighTiles(tile, theta=90):
+    grid = MAZE.grid 
+    valid_neigh = []
+    n = MAZE.n
+    i = tile//n
+    j = tile%n
+
+    cur_node = str(i)+","+str(j)
+
+    cur_node_neigh = []
+    coma_indx = cur_node.find(',')
+    node_i = int(cur_node[:coma_indx])
+    node_j = int(cur_node[coma_indx+1:])
+    
+    cur_node_neigh.append(str(node_i-1)+","+str(node_j))
+    cur_node_neigh.append(str(node_i)+","+str(node_j-1))
+    cur_node_neigh.append(str(node_i)+","+str(node_j+1))
+    cur_node_neigh.append(str(node_i+1)+","+str(node_j))
+
+    #up
+    if i == 0: valid_neigh.append(False)
+    else:
+        if grid[i-1][j] == 0:
+            valid_neigh.append(True)
+        else:
+            valid_neigh.append(False)
+    # left 
+    if j == 0: valid_neigh.append(False)
+    else:
+        if grid[i][j-1] == 0:
+            valid_neigh.append(True)
+        else:
+            valid_neigh.append(False)
+    # right
+    if j == n-1: valid_neigh.append(False)
+    else:
+        if grid[i][j+1] == 0:
+            valid_neigh.append(True)
+        else:
+            valid_neigh.append(False)
+    # down
+    if i == n-1:valid_neigh.append(False)
+    else:
+        if grid[i+1][j] == 0:
+            valid_neigh.append(True)
+        else:
+            valid_neigh.append(False)
+
+    
+    valid_walls = checkWalls(theta)
+    for i in range(len(valid_walls)):
+        if valid_walls[i] == False:
+            cur_node_neigh[i] = "wall"
+            valid_neigh[i] = False
+
+    for neigh in cur_node_neigh:
+        if neigh == "wall": continue
+        if neigh not in MAZE.graph:
+            MAZE.graph[neigh] = []
+
+    MAZE.graph[cur_node] = cur_node_neigh
+    return valid_neigh
+
+stack = []
+# helper, used to append for backtraking
+def traversalStrightHelper():
+    straightMotionD(10)
+    stack.append(1)
+    
+# rotation_angle = pi/2
+rotation_angle = 90
+def traversalRotationtHelper():
+    rotationInPlace('left', rotation_angle, 0.6)
+    stack.append(0)
+
+# find in which direction to rotate once a valid neighbor is found
+def traversalRotationtHelper(theta, neighbors):
+
+    if theta < 94 and theta > 86:
+        if neighbors[1]:
+            rotationInPlace('left', rotation_angle, 0.6)
+            stack.append(0)
+        elif neighbors[2]:
+            rotationInPlace('right', rotation_angle, 0.6)
+            stack.append(-1)
+        elif neighbors[3]:
+            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle, 0.6)
+            stack.append(-1)
+            stack.append(-1)
+
+    elif theta < 184 and theta > 176:
+        if neighbors[3]:
+            rotationInPlace('left', rotation_angle, 0.6)
+            stack.append(0)
+            return
+        elif neighbors[0]:
+            rotationInPlace('right', rotation_angle, 0.6)
+            stack.append(-1)
+        elif neighbors[2]:
+            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle, 0.6)
+            stack.append(-1)
+            stack.append(-1)
+
+    elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
+        if neighbors[0]:
+            rotationInPlace('left', rotation_angle, 0.6)
+            stack.append(0)
+        elif neighbors[3]:
+            rotationInPlace('right', rotation_angle, 0.6)
+            stack.append(-1)
+        elif neighbors[1]:
+            rotationInPlace('righ', rotation_angle, 0.6)
+            rotationInPlace('righ', rotation_angle, 0.6)
+            stack.append(0)
+            stack.append(0)
+
+    elif theta < 274 and theta > 266:
+        if neighbors[2]:
+            rotationInPlace('left', rotation_angle, 0.6)
+            stack.append(0)
+        elif neighbors[1]:
+            rotationInPlace('right', rotation_angle, 0.6)
+            stack.append(-1)
+        elif neighbors[0]:
+            rotationInPlace('righ', rotation_angle, 0.6)
+            rotationInPlace('righ', rotation_angle, 0.6)
+            stack.append(0)
+            stack.append(0)
+
+n_i, n_j = 0, 0
+def normalizeGraph(graph):
+    global n_i, n_j
+    normalized = {}
+    min_i, min_j = 999, 999
+
+    for node in graph:
+        coma_indx = node.find(',')
+        i = int(node[:coma_indx])
+        j = int(node[coma_indx+1:])
+
+        if min_i > i: min_i = i
+        if min_j > j: min_j = j
+    
+    for node in graph:
+        new_neighbors = copy.deepcopy(graph[node])
+
+        for k in range(4):
+            if new_neighbors[k] == "wall": continue
+            coma_indx = new_neighbors[k].find(',')
+            i = int(new_neighbors[k][:coma_indx]) - min_i
+            j = int(new_neighbors[k][coma_indx+1:]) - min_j
+            new_neighbors[k] = str(i) + ',' + str(j)
+
+        coma_indx = node.find(',')
+        i = int(node[:coma_indx]) - min_i
+        j = int(node[coma_indx+1:]) - min_j
+
+        normalized[str(i) + ',' + str(j)] = new_neighbors
+    n_i, n_j = min_i, min_j
+    return normalized
+
+def spin():
+    while robot.step(timestep) != -1:
+        setSpeedIPS(-2, 2)
+
+# DFS traversal, uses a global stack to keep backtrack
+# the neighbors are found locally, and are not stored in a DS
+target_visited_nodes = 16
+def traverse():
+    flag = False
+    ones = sum([i.count(1) for i in MAZE.grid])
+
+    if ones == target_visited_nodes: # all nodes already discovered
+        flag = True
+
+    if flag: # all nodes found
+        print(f'DFS completion time: {robot.getTime():.2f}s')
+        neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
+        setSpeedIPS(-2, 2)
+
+        MAZE.graph = normalizeGraph(MAZE.graph)
+        MAZE.n = 4
+        MAZE.generateTiles()
+        MAZE.generateGrid()
+
+        return True
+
+    n_tiles = neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
+    theta = ROBOT_POSE.theta
+
+    # print(stack)
+    # BACK TRACK
+    if True not in n_tiles: 
+        top = stack.pop()
+        if top == 1:
+            straightMotionD(-10)
+        elif top == 0:
+            rotationInPlace('right', rotation_angle, 0.6)
+        elif top == -1:
+            rotationInPlace('left', rotation_angle, 0.6)
+    
+    elif theta < 94 and theta > 86:
+        if n_tiles[0]:
+            traversalStrightHelper()
+        else:
+            traversalRotationtHelper(theta, n_tiles)
+    elif theta < 184 and theta > 176:
+        if n_tiles[1]:
+            traversalStrightHelper()
+        else:
+            traversalRotationtHelper(theta, n_tiles)
+    elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
+        if n_tiles[2]:
+            traversalStrightHelper()
+        else:
+            traversalRotationtHelper(theta, n_tiles)
+    elif theta < 274 and theta > 266:
+        if n_tiles[3]:
+            traversalStrightHelper()
+        else:
+            traversalRotationtHelper(theta, n_tiles)
+    return False
+
 ########################## Motion logic ######################## 
 # 5.024 = max speed in in per second
 def straightMotionD(D):
@@ -323,15 +566,13 @@ def straightMotionD(D):
         # Checks if wheel distance is larger than D
         if w_r*abs(getPositionSensors()[0] - start_position) >= D-0.01:
             setSpeedIPS(0, 0)
-            # ROBOT_POSE.updatePose(MAZE)
-            # ROBOT_POSE.printRobotPose(MAZE)
+            ROBOT_POSE.updatePose(MAZE)
             break
 
-        # ROBOT_POSE.updatePose(MAZE)
-        # ROBOT_POSE.printRobotPose(MAZE)
+        ROBOT_POSE.updatePose(MAZE)
 
 # assume angle is in radians
-def rotationInPlace(direction, degree):
+def rotationInPlace(direction, degree, v):
     # Determines Rotation and sets proper speeds
     if direction == "left":
         degree *= -1
@@ -371,12 +612,10 @@ def rotationInPlace(direction, degree):
                 setSpeedIPS(-.01, .01)
             else:
                 setSpeedIPS(0,0)
-                # ROBOT_POSE.updatePose(MAZE)
-                # ROBOT_POSE.printRobotPose(MAZE)
+                ROBOT_POSE.updatePose(MAZE)
                 break
 
-        # ROBOT_POSE.updatePose(MAZE)
-        # ROBOT_POSE.printRobotPose(MAZE)
+        ROBOT_POSE.updatePose(MAZE)
 
 def circleR(R,V=4,direction='right',percent = 1):
     # Determines direction and sets proper speeds
@@ -742,10 +981,10 @@ def runMotions(motions):
             straightMotionD(distance/2)
         elif motion == "il":
             print("-  π/2 Left Rotation-in-Place")
-            rotationInPlace('left', rotating_angle)
+            rotationInPlace('left', rotating_angle, 0.6)
         elif motion == "ir":
             print("-  π/2 Right Rotation-in-Place")
-            rotationInPlace('right', rotating_angle)
+            rotationInPlace('right', rotating_angle, 0.6)
         else:
             straightMotionD(0)
 
@@ -799,35 +1038,151 @@ def nodesToTiles(path):
 
     return ret
 
+def normalizeRobotPose(tile):
+    global n_i, n_j
+    i = tile//8 - n_i
+    j = (tile%8) - n_j
+    return(i*4 + j + 1)
+
+
+def pathPlanningRotationHelper(theta, target):
+    if theta < 94 and theta > 86:
+        if target == 90: 
+            return
+        elif target == 0: 
+            rotationInPlace('right', rotation_angle, 0.6)
+        elif target == 180: 
+            rotationInPlace('left', rotation_angle, 0.6)
+        elif target == 270: 
+            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle, 0.6)
+
+    elif theta < 184 and theta > 176:
+        if target == 90: 
+            rotationInPlace('right', rotation_angle, 0.6)
+        elif target == 0: 
+            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle, 0.6)
+        elif target == 180: 
+            return
+        elif target == 270: 
+            rotationInPlace('left', rotation_angle, 0.6)
+
+    elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
+        if target == 90: 
+            rotationInPlace('left', rotation_angle, 0.6)
+        elif target == 0: 
+            return
+        elif target == 180: 
+            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle, 0.6)
+        elif target == 270: 
+            rotationInPlace('right', rotation_angle, 0.6)
+    elif theta < 274 and theta > 266:
+        if target == 90: 
+            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle, 0.6)
+        elif target == 0: 
+            rotationInPlace('left', rotation_angle, 0.6)
+        elif target == 180: 
+            rotationInPlace('right', rotation_angle, 0.6)
+        elif target == 270: 
+            return
+
+rotateUntilAngle(90)
 def pathPlanning(start_node, end_node):
     global motion_theta
-    loadGraph()
+    startLocation = False
 
-    path, wfp_vals = MAZE.wfp_bfs(start_node, end_node)
-    printWFP(MAZE.graph, wfp_vals)
-    
-    waypoints = bfsToList(path)
+    if startLocation:
+        loadGraph()
+        path, wfp_vals = MAZE.wfp_bfs(start_node, end_node)
+        printWFP(MAZE.graph, wfp_vals)
+        
+        waypoints = bfsToList(path)
 
-    motion_theta = firstTheta(waypoints[0], waypoints[1])
-    rotateUntilAngle(motion_theta)
+        motion_theta = firstTheta(waypoints[0], waypoints[1])
+        rotateUntilAngle(motion_theta)
 
-    print("Wave-Front Planner path: " + str(nodesToTiles(path)))
-    # print("Rotating until angle = " + str(motion_theta))
-    # print(f'Start node:\t\t{waypoints[0]}')
-    # print(f'End node:\t\t{waypoints[len(waypoints)-1]}')
-    # print(f'# of nodes:\t\t{len(waypoints)}')
-    
-    motion_theta = firstTheta(waypoints[0], waypoints[1])
+        print("Wave-Front Planner path: " + str(nodesToTiles(path)))
+        motion_theta = firstTheta(waypoints[0], waypoints[1])
 
-    start_time = robot.getTime()
-    motions = generateMotions(waypoints)
-    
-    runMotions(motions)
-    print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
+        start_time = robot.getTime()
+        motions = generateMotions(waypoints)
+        
+        runMotions(motions)
+        print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
 
-    print("sping :)")
-    spin()
+        print("sping :)")
+        spin()
+    else:
+        if traverse():
+            global mappingbool
+            mappingbool = False
+            ROBOT_POSE.tile = normalizeRobotPose(ROBOT_POSE.tile-1)
+            
+            top_left = MAZE.tiles[ROBOT_POSE.tile-1][0]
+            ROBOT_POSE.x = top_left[0]+5
+            ROBOT_POSE.y = top_left[1]-5
+
+            MAZE.updateGrid(ROBOT_POSE.tile-1)
+            # print("Map normalized: ")
+            # ROBOT_POSE.printRobotPose(MAZE)
+
+            print("Going to starting node... ")
+            cur_i = (ROBOT_POSE.tile-1)//4
+            cur_j = (ROBOT_POSE.tile-1)%4
+
+            cur_node = str(cur_i)+","+str(cur_j)
+
+            path, wfp_vals = MAZE.wfp_bfs(cur_node, start_node)
+            printWFP(MAZE.graph, wfp_vals)
+
+            waypoints = bfsToList(path)
+
+            motion_theta = firstTheta(waypoints[0], waypoints[1])
+            pathPlanningRotationHelper(ROBOT_POSE.theta, motion_theta)
+
+            print("Wave-Front Planner path: " + str(nodesToTiles(path)))
+            motion_theta = firstTheta(waypoints[0], waypoints[1])
+
+            start_time = robot.getTime()
+            motions = generateMotions(waypoints)
+            
+            runMotions(motions)
+            print(f'Initial node found in: {(robot.getTime()-start_time):.2f}s')
+
+            MAZE.generateGrid()
+            MAZE.updateGrid(ROBOT_POSE.tile-1)
+            coma_indx = cur_node.find(',')
+            node_i = int(cur_node[:coma_indx])
+            node_j = int(cur_node[coma_indx+1:])
+            ROBOT_POSE.tile = node_i*4 + node_j + 1
+            MAZE.updateGrid(ROBOT_POSE.tile-1)
+            ROBOT_POSE.theta = imuCleaner(imu.getRollPitchYaw()[2])
+
+
+            path, wfp_vals = MAZE.wfp_bfs(start_node, end_node)
+            printWFP(MAZE.graph, wfp_vals)
+
+            waypoints = bfsToList(path)
+
+            motion_theta = firstTheta(waypoints[0], waypoints[1])
+            pathPlanningRotationHelper(ROBOT_POSE.theta, motion_theta)
+
+            print("Wave-Front Planner path: " + str(nodesToTiles(path)))
+            motion_theta = firstTheta(waypoints[0], waypoints[1])
+
+            start_time = robot.getTime()
+            motions = generateMotions(waypoints)
+
+            runMotions(motions)
+            print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
+
+            print("sping :)")
+
+            spin()
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("2,2", "3,3")
+    pathPlanning("0,0", "3,2")

@@ -268,7 +268,7 @@ class RobotPose:
     # Update pose of robot and grid, updates if a tile is found
     def updatePose(self, MAZE):
         global prev_l, prev_r, mappingbool, x_add, y_add
-        # if mappingbool: self.printRobotPose(MAZE)
+        if mappingbool: self.printRobotPose(MAZE)
         cur_l, cur_r = getPositionSensors()
         vl = (cur_l-prev_l)/0.032   # 32 ms 
         vr = (cur_r-prev_r)/0.032
@@ -1275,4 +1275,4 @@ def pathPlanning(start_node, end_node, startlocationbool):
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("3,3", "1,2", True)
+    pathPlanning("3,3", "1,2", False)

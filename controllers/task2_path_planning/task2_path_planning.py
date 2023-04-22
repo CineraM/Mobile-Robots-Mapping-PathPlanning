@@ -100,18 +100,21 @@ def setSpeedIPS(vl, vr):
     leftMotor.setVelocity(vl)
     rightMotor.setVelocity(vr)
 
-# calculates distance after task
-# For this lab only calculate when abs(vl) = abs(vr)
 def distAfterTask(vl, vr):
     vl = round(vl, 8)
     vr = round(vr, 8)
     
-    if vl == vr:
-        return 0.032*vl
+    if vl == vr:  
+        return 0.032*vl, 0.032*vr
     if vl == -vr or math.isnan(vl):
-        return 0
-    return 0
-
+        return 0, 0
+    else:
+        v = (vr+vl)/2
+        S = v*0.032
+        x = S*math.cos(imu.getRollPitchYaw()[2])
+        y = S*math.sin(imu.getRollPitchYaw()[2])
+        return abs(x), abs(y)
+    
 # returns the decorders values
 def getPositionSensors():
     return leftposition_sensor.getValue(), rightposition_sensor.getValue()
@@ -246,6 +249,9 @@ class mazeMap:
 
         return paths[search_node], node_weights
 
+y_add = True
+x_add = True
+
 class RobotPose:
     def __init__(self, x, y, tile, theta):
         self.x = x
@@ -258,30 +264,35 @@ class RobotPose:
         print(f'x: {self.x:.2f}\ty: {self.y:.2f}\ttile: {self.tile}\ttheta: {self.theta:.2f}')
         for list in maze.grid:
             print("\t" + str(list))
-        print("-----------------------------------------------")
 
     # Update pose of robot and grid, updates if a tile is found
     def updatePose(self, MAZE):
-        global prev_l, prev_r, mappingbool
+        global prev_l, prev_r, mappingbool, x_add, y_add
         if mappingbool: self.printRobotPose(MAZE)
         cur_l, cur_r = getPositionSensors()
         vl = (cur_l-prev_l)/0.032   # 32 ms 
         vr = (cur_r-prev_r)/0.032
         imu_reading = imuCleaner(imu.getRollPitchYaw()[2])
-        dist = distAfterTask(vl*w_r, vr*w_r)
+        x_dist, y_dist = distAfterTask(vl*w_r, vr*w_r)
         self.theta = imu_reading
         
         prev_l = cur_l
         prev_r = cur_r
 
-        if imu_reading < 94 and imu_reading > 86:
-            self.y += dist
-        elif imu_reading < 184 and imu_reading > 176:
-            self.x -= dist
-        elif imu_reading < 274 and imu_reading > 266:
-            self.y -= dist
-        elif imu_reading <= 360 and imu_reading > 356 or imu_reading < 4 and imu_reading >= 0:
-            self.x += dist
+        if x_dist == y_dist:
+            if imu_reading < 94 and imu_reading > 86:
+                self.y += x_dist
+            elif imu_reading < 184 and imu_reading > 176:
+                self.x -= x_dist
+            elif imu_reading < 274 and imu_reading > 266:
+                self.y -= x_dist
+            elif imu_reading <= 360 and imu_reading > 356 or imu_reading < 4 and imu_reading >= 0:
+                self.x += x_dist
+        else:
+            if y_add: self.y+=y_dist
+            else:     self.y-=y_dist
+            if x_add: self.x+=x_dist
+            else:     self.x-=x_dist
 
         tile = MAZE.updateTile(self)
         if tile != -1: 
@@ -392,7 +403,7 @@ def traversalStrightHelper():
 # rotation_angle = pi/2
 rotation_angle = 90
 def traversalRotationtHelper():
-    rotationInPlace('left', rotation_angle, 0.6)
+    rotationInPlace('left', rotation_angle)
     stack.append(0)
 
 # find in which direction to rotate once a valid neighbor is found
@@ -400,54 +411,54 @@ def traversalRotationtHelper(theta, neighbors):
 
     if theta < 94 and theta > 86:
         if neighbors[1]:
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
             stack.append(0)
         elif neighbors[2]:
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
             stack.append(-1)
         elif neighbors[3]:
-            rotationInPlace('left', rotation_angle, 0.6)
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
+            rotationInPlace('left', rotation_angle)
             stack.append(-1)
             stack.append(-1)
 
     elif theta < 184 and theta > 176:
         if neighbors[3]:
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
             stack.append(0)
             return
         elif neighbors[0]:
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
             stack.append(-1)
         elif neighbors[2]:
-            rotationInPlace('left', rotation_angle, 0.6)
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
+            rotationInPlace('left', rotation_angle)
             stack.append(-1)
             stack.append(-1)
 
     elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
         if neighbors[0]:
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
             stack.append(0)
         elif neighbors[3]:
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
             stack.append(-1)
         elif neighbors[1]:
-            rotationInPlace('righ', rotation_angle, 0.6)
-            rotationInPlace('righ', rotation_angle, 0.6)
+            rotationInPlace('righ', rotation_angle)
+            rotationInPlace('righ', rotation_angle)
             stack.append(0)
             stack.append(0)
 
     elif theta < 274 and theta > 266:
         if neighbors[2]:
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
             stack.append(0)
         elif neighbors[1]:
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
             stack.append(-1)
         elif neighbors[0]:
-            rotationInPlace('righ', rotation_angle, 0.6)
-            rotationInPlace('righ', rotation_angle, 0.6)
+            rotationInPlace('righ', rotation_angle)
+            rotationInPlace('righ', rotation_angle)
             stack.append(0)
             stack.append(0)
 
@@ -500,7 +511,7 @@ def traverse():
     if flag: # all nodes found
         print(f'DFS completion time: {robot.getTime():.2f}s')
         neighTiles(ROBOT_POSE.tile-1, ROBOT_POSE.theta)
-        setSpeedIPS(-2, 2)
+        setSpeedIPS(0, 0)
 
         MAZE.graph = normalizeGraph(MAZE.graph)
         MAZE.n = 4
@@ -519,9 +530,9 @@ def traverse():
         if top == 1:
             straightMotionD(-10)
         elif top == 0:
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
         elif top == -1:
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
     
     elif theta < 94 and theta > 86:
         if n_tiles[0]:
@@ -548,6 +559,7 @@ def traverse():
 ########################## Motion logic ######################## 
 # 5.024 = max speed in in per second
 def straightMotionD(D):
+    if not mappingbool: ROBOT_POSE.printRobotPose(MAZE)
     V=5.024
     is_neg = False
     if D < 0:
@@ -572,7 +584,7 @@ def straightMotionD(D):
         ROBOT_POSE.updatePose(MAZE)
 
 # assume angle is in radians
-def rotationInPlace(direction, degree, v):
+def rotationInPlace(direction, degree):
     # Determines Rotation and sets proper speeds
     if direction == "left":
         degree *= -1
@@ -600,75 +612,82 @@ def rotationInPlace(direction, degree, v):
     marg_error = .01
 
     while robot.step(timestep) != -1:
-        current_heading = imuCleaner(imu.getRollPitchYaw()[2])
-        east_flag = True if end_heading <= 4 or end_heading >= 356 else False
+        # current_heading = imuCleaner(imu.getRollPitchYaw()[2])
+        # east_flag = True if end_heading <= 4 or end_heading >= 356 else False
         if (robot.getTime() - t_start) >= T:
-
-            if east_flag:
-                current_heading = current_heading - 360 if current_heading > 355 else current_heading
-            if current_heading > (end_heading+marg_error):
-                setSpeedIPS(.01, -.01)
-            elif current_heading < (end_heading-marg_error):
-                setSpeedIPS(-.01, .01)
-            else:
                 setSpeedIPS(0,0)
                 ROBOT_POSE.updatePose(MAZE)
                 break
+            # if east_flag:
+            #     current_heading = current_heading - 360 if current_heading > 355 else current_heading
+            # if current_heading > (end_heading+marg_error):
+            #     setSpeedIPS(.01, -.01)
+            # elif current_heading < (end_heading-marg_error):
+            #     setSpeedIPS(-.01, .01)
+            # else:
+
 
         ROBOT_POSE.updatePose(MAZE)
 
-def circleR(R,V=4,direction='right',percent = 1):
-    # Determines direction and sets proper speeds
-    axel_length = distBtwWhe
-    wheel_radius = w_r
-    omega = V/abs(R)
-    if R < 0 :
-        sign = -1
+def circleRmotionHelper(direction="left"):
+    global x_add, y_add
+    theta = imuCleaner(imu.getRollPitchYaw()[2])
+
+    if theta < 94 and theta > 86:
+        if direction == "left":
+            x_add = False
+            y_add = False
+        else:
+            x_add = True
+            y_add = False
+    elif theta < 184 and theta > 176:
+        if direction == "left":
+            x_add = False
+            y_add = True
+        else:
+            x_add = False
+            y_add = False
+    elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
+        if direction == "left":
+            x_add = True
+            y_add = False
+        else:
+            x_add = True
+            y_add = True
+    elif theta < 274 and theta > 266:
+        if direction == "left":
+            x_add = True
+            y_add = True
+        else:
+            x_add = False
+            y_add = True
+
+def circleR(R=10, V=2, direction="left"):
+    if not mappingbool: ROBOT_POSE.printRobotPose(MAZE)
+    vr = V
+    angle = pi/2
+    R = abs(R)
+    omega = vr/(R+dmid)
+    vl = omega*(R-dmid)
+    v = (vr+vl)/2
+    s = (angle) * R
+    time = s/v
+    s_time = robot.getTime()
+
+    circleRmotionHelper(direction)
+    if direction == "right":
+        setSpeedIPS(vr,vl)
     else:
-        sign = 1
-
-    # Right and Clockwise
-    if direction == 'right' and sign > 0:
-        vl = omega*(abs(R) + sign*(axel_length/2))
-        vr = omega*(abs(R) - sign*(axel_length/2))
-        D = 2*math.pi*(abs(R) + sign*(axel_length/2))
-    # Right and Counter Clockwise
-    elif direction == 'right' and sign < 0:
-        vl = -omega*(abs(R) - sign*(axel_length/2))
-        vr = -omega*(abs(R) + sign*(axel_length/2))
-        D = 2*math.pi*(abs(R) - sign*(axel_length/2))
-    # Left and Clockwise
-    elif direction == 'left' and sign > 0:
-        vl = -omega*(abs(R) - sign*(axel_length/2))
-        vr = -omega*(abs(R) + sign*(axel_length/2))
-        D = 2*math.pi*(abs(R) - sign*(axel_length/2))
-    # Left and Counter Clockwise
-    elif direction == 'left' and sign < 0:
-        vl = omega*(abs(R) + sign*(axel_length/2))
-        vr = omega*(abs(R) - sign*(axel_length/2))
-        D = 2*math.pi*(abs(R) + sign*(axel_length/2))
-
-    D = D*percent
-    phi_l = vl/wheel_radius
-    phi_r = vr/wheel_radius
-
-    # Checks to see if speed is to high 
-    if abs(phi_l) > leftMotor.getMaxVelocity() or abs(phi_r) > rightMotor.getMaxVelocity():
-        print("Speed is too great for robot")
-        return
-
-    # Gets starting postion of left wheel encoder to use as a stoping condition
-    start_position = leftposition_sensor.getValue()
-    # Sets motor speeds and sets start time
-    leftMotor.setVelocity(phi_l)
-    rightMotor.setVelocity(phi_r)
+        setSpeedIPS(vl,vr)
 
     while robot.step(timestep) != -1:
-    # Checks if wheel distance is larger than D
-        if wheel_radius*abs(leftposition_sensor.getValue() - start_position) >= D-0.02:
-            leftMotor.setVelocity(0)
-            rightMotor.setVelocity(0)
+        if robot.getTime()-s_time > time:
+            setSpeedIPS(0,0)
+            ROBOT_POSE.updatePose(MAZE)
             break
+        ROBOT_POSE.updatePose(MAZE)
+    
+
 ########################## Motion logic ######################## 
 
 def rotateUntilAngle(angle):
@@ -961,30 +980,32 @@ def runMotions(motions):
             straightMotionD(distance)
         elif motion == "ql":
             print("-  π/2 Left circular motion, R=10in")
-            circleR(R=-distance, V=circleV, direction="left", percent=0.25)
+            circleR(R=-distance, V=circleV, direction="left")
         elif motion == "qr":
             print("-  π/2 Right circular motion, R=10in")
-            circleR(R=distance, V=circleV, direction="right", percent=0.25)
+            circleR(R=distance, V=circleV, direction="right")
         elif motion == "hl":
             print("-  Forward 5in")
             straightMotionD(distance/2)
             print("-  π Left circular motion, R=5in")
-            circleR(R=-distance/2, V=circleV, direction="left", percent=0.5)
+            circleR(R=-distance/2, V=circleV, direction="left")
+            circleR(R=-distance/2, V=circleV, direction="left")
             print("-  Forward 5in")
             straightMotionD(distance/2)
         elif motion == "hr":
             print("-  Forward 5in")
             straightMotionD(distance/2)
             print("-  π Right circular motion, R=5in")
-            circleR(R=distance/2, V=circleV, direction="right", percent=0.5)
+            circleR(R=distance/2, V=circleV, direction="right")
+            circleR(R=-distance/2, V=circleV, direction="right")
             print("-  Forward 5in")
             straightMotionD(distance/2)
         elif motion == "il":
             print("-  π/2 Left Rotation-in-Place")
-            rotationInPlace('left', rotating_angle, 0.6)
+            rotationInPlace('left', rotating_angle)
         elif motion == "ir":
             print("-  π/2 Right Rotation-in-Place")
-            rotationInPlace('right', rotating_angle, 0.6)
+            rotationInPlace('right', rotating_angle)
         else:
             straightMotionD(0)
 
@@ -1044,80 +1065,111 @@ def normalizeRobotPose(tile):
     j = (tile%8) - n_j
     return(i*4 + j + 1)
 
-
 def pathPlanningRotationHelper(theta, target):
     if theta < 94 and theta > 86:
         if target == 90: 
             return
         elif target == 0: 
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
         elif target == 180: 
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
         elif target == 270: 
-            rotationInPlace('left', rotation_angle, 0.6)
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
+            rotationInPlace('left', rotation_angle)
 
     elif theta < 184 and theta > 176:
         if target == 90: 
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
         elif target == 0: 
-            rotationInPlace('left', rotation_angle, 0.6)
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
+            rotationInPlace('left', rotation_angle)
         elif target == 180: 
             return
         elif target == 270: 
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
 
     elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
         if target == 90: 
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
         elif target == 0: 
             return
         elif target == 180: 
-            rotationInPlace('left', rotation_angle, 0.6)
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
+            rotationInPlace('left', rotation_angle)
         elif target == 270: 
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
     elif theta < 274 and theta > 266:
         if target == 90: 
-            rotationInPlace('left', rotation_angle, 0.6)
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
+            rotationInPlace('left', rotation_angle)
         elif target == 0: 
-            rotationInPlace('left', rotation_angle, 0.6)
+            rotationInPlace('left', rotation_angle)
         elif target == 180: 
-            rotationInPlace('right', rotation_angle, 0.6)
+            rotationInPlace('right', rotation_angle)
         elif target == 270: 
             return
 
-rotateUntilAngle(90)
-def pathPlanning(start_node, end_node):
+def pathPlanningHelper(start_node, end_node, message):
     global motion_theta
+    path, wfp_vals = MAZE.wfp_bfs(start_node, end_node)
+    waypoints = bfsToList(path)
+    motion_theta = firstTheta(waypoints[0], waypoints[1])
+    pathPlanningRotationHelper(ROBOT_POSE.theta, motion_theta)
+
+    start_idx = start_node.find(',')
+    start_tile = int(start_node[:start_idx])*4 + int(start_node[start_idx+1:]) + 1
+    end_indx = end_node.find(',')
+    end_tile = int(end_node[:end_indx])*4 + int(end_node[end_indx+1:]) + 1
+
+    print("---------------------------------------------------------------")
+    print(message)
+    print(f'Calculating shortest path from tile {start_tile} to tile {end_tile}')
+    print("Wave-Front Planner path: " + str(nodesToTiles(path)))
+    printWFP(MAZE.graph, wfp_vals)
+
+    start_time = robot.getTime()
+    motions = generateMotions(waypoints)
+    
+    print(motions)
+
+    ROBOT_POSE.theta = imuCleaner(imu.getRollPitchYaw()[2])
+    runMotions(motions)
+    ROBOT_POSE.printRobotPose(MAZE)
+    print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
+
+flag = True
+def pathPlanning(start_node, end_node):
+    global motion_theta, mappingbool, flag
     startLocation = False
 
+    # assuming we load the map, and the robot is on the starting position
     if startLocation:
+        mappingbool = False
+        coma_indx = start_node.find(',')
+        node_i = int(start_node[:coma_indx])
+        node_j = int(start_node[coma_indx+1:])
+        ROBOT_POSE.tile = node_i*4 + node_j + 1
+        ROBOT_POSE.theta = imuCleaner(imu.getRollPitchYaw()[2])
+
+        MAZE.n = 4
+        MAZE.generateGrid()
+        MAZE.generateTiles()
+        MAZE.updateGrid(ROBOT_POSE.tile-1)
+
+        top_left = MAZE.tiles[ROBOT_POSE.tile-1][0]
+        ROBOT_POSE.x = top_left[0]+5
+        ROBOT_POSE.y = top_left[1]-5
         loadGraph()
-        path, wfp_vals = MAZE.wfp_bfs(start_node, end_node)
-        printWFP(MAZE.graph, wfp_vals)
-        
-        waypoints = bfsToList(path)
 
-        motion_theta = firstTheta(waypoints[0], waypoints[1])
-        rotateUntilAngle(motion_theta)
-
-        print("Wave-Front Planner path: " + str(nodesToTiles(path)))
-        motion_theta = firstTheta(waypoints[0], waypoints[1])
-
-        start_time = robot.getTime()
-        motions = generateMotions(waypoints)
-        
-        runMotions(motions)
-        print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
+        pathPlanningHelper(start_node, end_node, "Traversing to end node...")
 
         print("sping :)")
         spin()
     else:
+        if flag:
+            rotateUntilAngle(90)
+            flag=False
         if traverse():
-            global mappingbool
             mappingbool = False
             ROBOT_POSE.tile = normalizeRobotPose(ROBOT_POSE.tile-1)
             
@@ -1126,58 +1178,24 @@ def pathPlanning(start_node, end_node):
             ROBOT_POSE.y = top_left[1]-5
 
             MAZE.updateGrid(ROBOT_POSE.tile-1)
-            # print("Map normalized: ")
-            # ROBOT_POSE.printRobotPose(MAZE)
+            print("Map normalized: ")
+            ROBOT_POSE.printRobotPose(MAZE)
 
-            print("Going to starting node... ")
             cur_i = (ROBOT_POSE.tile-1)//4
             cur_j = (ROBOT_POSE.tile-1)%4
-
             cur_node = str(cur_i)+","+str(cur_j)
 
-            path, wfp_vals = MAZE.wfp_bfs(cur_node, start_node)
-            printWFP(MAZE.graph, wfp_vals)
-
-            waypoints = bfsToList(path)
-
-            motion_theta = firstTheta(waypoints[0], waypoints[1])
-            pathPlanningRotationHelper(ROBOT_POSE.theta, motion_theta)
-
-            print("Wave-Front Planner path: " + str(nodesToTiles(path)))
-            motion_theta = firstTheta(waypoints[0], waypoints[1])
-
-            start_time = robot.getTime()
-            motions = generateMotions(waypoints)
-            
-            runMotions(motions)
-            print(f'Initial node found in: {(robot.getTime()-start_time):.2f}s')
+            pathPlanningHelper(cur_node, start_node, "Traversing to starting node...")
 
             MAZE.generateGrid()
-            MAZE.updateGrid(ROBOT_POSE.tile-1)
-            coma_indx = cur_node.find(',')
-            node_i = int(cur_node[:coma_indx])
-            node_j = int(cur_node[coma_indx+1:])
+            coma_indx = start_node.find(',')
+            node_i = int(start_node[:coma_indx])
+            node_j = int(start_node[coma_indx+1:])
             ROBOT_POSE.tile = node_i*4 + node_j + 1
             MAZE.updateGrid(ROBOT_POSE.tile-1)
             ROBOT_POSE.theta = imuCleaner(imu.getRollPitchYaw()[2])
 
-
-            path, wfp_vals = MAZE.wfp_bfs(start_node, end_node)
-            printWFP(MAZE.graph, wfp_vals)
-
-            waypoints = bfsToList(path)
-
-            motion_theta = firstTheta(waypoints[0], waypoints[1])
-            pathPlanningRotationHelper(ROBOT_POSE.theta, motion_theta)
-
-            print("Wave-Front Planner path: " + str(nodesToTiles(path)))
-            motion_theta = firstTheta(waypoints[0], waypoints[1])
-
-            start_time = robot.getTime()
-            motions = generateMotions(waypoints)
-
-            runMotions(motions)
-            print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
+            pathPlanningHelper(start_node, end_node, "Traversing to end node...")
 
             print("sping :)")
 
@@ -1185,4 +1203,4 @@ def pathPlanning(start_node, end_node):
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("0,0", "3,2")
+    pathPlanning("3,0", "0,0")

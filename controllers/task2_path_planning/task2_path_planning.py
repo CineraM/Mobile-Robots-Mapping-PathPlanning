@@ -268,7 +268,7 @@ class RobotPose:
     # Update pose of robot and grid, updates if a tile is found
     def updatePose(self, MAZE):
         global prev_l, prev_r, mappingbool, x_add, y_add
-        if mappingbool: self.printRobotPose(MAZE)
+        # if mappingbool: self.printRobotPose(MAZE)
         cur_l, cur_r = getPositionSensors()
         vl = (cur_l-prev_l)/0.032   # 32 ms 
         vr = (cur_r-prev_r)/0.032
@@ -289,10 +289,14 @@ class RobotPose:
             elif imu_reading <= 360 and imu_reading > 356 or imu_reading < 4 and imu_reading >= 0:
                 self.x += x_dist
         else:
-            if y_add: self.y+=y_dist
-            else:     self.y-=y_dist
-            if x_add: self.x+=x_dist
-            else:     self.x-=x_dist
+            if y_add: 
+                self.y+=y_dist
+            elif y_add == False:
+                self.y-=y_dist
+            if x_add: 
+                self.x+=x_dist
+            elif x_add == False:     
+                self.x-=x_dist
 
         tile = MAZE.updateTile(self)
         if tile != -1: 
@@ -583,7 +587,6 @@ def straightMotionD(D):
 
         ROBOT_POSE.updatePose(MAZE)
 
-# assume angle is in radians
 def rotationInPlace(direction, degree):
     # Determines Rotation and sets proper speeds
     if direction == "left":
@@ -612,23 +615,89 @@ def rotationInPlace(direction, degree):
     marg_error = .01
 
     while robot.step(timestep) != -1:
-        # current_heading = imuCleaner(imu.getRollPitchYaw()[2])
-        # east_flag = True if end_heading <= 4 or end_heading >= 356 else False
         if (robot.getTime() - t_start) >= T:
-                setSpeedIPS(0,0)
-                ROBOT_POSE.updatePose(MAZE)
-                break
-            # if east_flag:
-            #     current_heading = current_heading - 360 if current_heading > 355 else current_heading
-            # if current_heading > (end_heading+marg_error):
-            #     setSpeedIPS(.01, -.01)
-            # elif current_heading < (end_heading-marg_error):
-            #     setSpeedIPS(-.01, .01)
-            # else:
-
+            setSpeedIPS(0,0)
+            ROBOT_POSE.updatePose(MAZE)
+            break
 
         ROBOT_POSE.updatePose(MAZE)
 
+    theta = imuCleaner(imu.getRollPitchYaw()[2])
+    
+    if theta < 94 and theta > 86:
+        if theta > 90:
+            while robot.step(timestep) != -1:
+                if theta-marg_error < 90: 
+                    setSpeedIPS(0,0)
+                    break
+                setSpeedIPS(.01, -.01)
+                theta = imuCleaner(imu.getRollPitchYaw()[2])
+                ROBOT_POSE.updatePose(MAZE)
+        else:
+            while robot.step(timestep) != -1:
+                if theta+marg_error > 90: 
+                    setSpeedIPS(0,0)
+                    break
+                setSpeedIPS(-.01, .01)
+                theta = imuCleaner(imu.getRollPitchYaw()[2])
+                ROBOT_POSE.updatePose(MAZE)
+
+    elif theta < 184 and theta > 176:
+        if theta > 180:
+            while robot.step(timestep) != -1:
+                if theta-marg_error < 180: 
+                    setSpeedIPS(0,0)
+                    break
+                setSpeedIPS(.01, -.01)
+                theta = imuCleaner(imu.getRollPitchYaw()[2])
+                ROBOT_POSE.updatePose(MAZE)
+        else:
+            while robot.step(timestep) != -1:
+                if theta+marg_error > 180: 
+                    setSpeedIPS(0,0)
+                    break
+                setSpeedIPS(-.01, .01)
+                theta = imuCleaner(imu.getRollPitchYaw()[2])
+                ROBOT_POSE.updatePose(MAZE)
+
+    elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
+        if theta > 90:
+            while robot.step(timestep) != -1:
+                if theta-marg_error < 360: 
+                    setSpeedIPS(0,0)
+                    break
+                setSpeedIPS(.01, -.01)
+                theta = imuCleaner(imu.getRollPitchYaw()[2])
+                ROBOT_POSE.updatePose(MAZE)
+        else:
+            while robot.step(timestep) != -1:
+                if theta+marg_error > 0: 
+                    setSpeedIPS(0,0)
+                    break
+                setSpeedIPS(-.01, .01)
+                theta = imuCleaner(imu.getRollPitchYaw()[2])
+                ROBOT_POSE.updatePose(MAZE)
+
+    elif theta < 274 and theta > 266:
+        if theta > 270:
+            while robot.step(timestep) != -1:
+                if theta-marg_error < 270: 
+                    setSpeedIPS(0,0)
+                    break
+                setSpeedIPS(.01, -.01)
+                theta = imuCleaner(imu.getRollPitchYaw()[2])
+                ROBOT_POSE.updatePose(MAZE)
+        else:
+            while robot.step(timestep) != -1:
+                if theta+marg_error > 270: 
+                    setSpeedIPS(0,0)
+                    break
+                setSpeedIPS(-.01, .01)
+                theta = imuCleaner(imu.getRollPitchYaw()[2])
+                ROBOT_POSE.updatePose(MAZE)
+
+# up true
+# down false
 def circleRmotionHelper(direction="left"):
     global x_add, y_add
     theta = imuCleaner(imu.getRollPitchYaw()[2])
@@ -636,33 +705,37 @@ def circleRmotionHelper(direction="left"):
     if theta < 94 and theta > 86:
         if direction == "left":
             x_add = False
-            y_add = False
+            y_add = True
         else:
             x_add = True
-            y_add = False
+            y_add = True
+
     elif theta < 184 and theta > 176:
         if direction == "left":
             x_add = False
-            y_add = True
-        else:
-            x_add = False
             y_add = False
-    elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
-        if direction == "left":
-            x_add = True
-            y_add = False
-        else:
-            x_add = True
-            y_add = True
-    elif theta < 274 and theta > 266:
-        if direction == "left":
-            x_add = True
-            y_add = True
         else:
             x_add = False
             y_add = True
 
+    elif theta <= 360 and theta > 356 or theta < 4 and theta >= 0:
+        if direction == "left":
+            x_add = True
+            y_add = True
+        else:
+            x_add = True
+            y_add = False
+
+    elif theta < 274 and theta > 266:
+        if direction == "left":
+            x_add = True
+            y_add = False
+        else:
+            x_add = False
+            y_add = False
+
 def circleR(R=10, V=2, direction="left"):
+    global x_add, y_add
     if not mappingbool: ROBOT_POSE.printRobotPose(MAZE)
     vr = V
     angle = pi/2
@@ -679,14 +752,16 @@ def circleR(R=10, V=2, direction="left"):
         setSpeedIPS(vr,vl)
     else:
         setSpeedIPS(vl,vr)
-
+    
+    # print(imuCleaner(imu.getRollPitchYaw()[2]))
+    # print("x,y bool")
+    # print(x_add, y_add)
     while robot.step(timestep) != -1:
         if robot.getTime()-s_time > time:
             setSpeedIPS(0,0)
             ROBOT_POSE.updatePose(MAZE)
             break
         ROBOT_POSE.updatePose(MAZE)
-    
 
 ########################## Motion logic ######################## 
 
@@ -1129,8 +1204,6 @@ def pathPlanningHelper(start_node, end_node, message):
 
     start_time = robot.getTime()
     motions = generateMotions(waypoints)
-    
-    print(motions)
 
     ROBOT_POSE.theta = imuCleaner(imu.getRollPitchYaw()[2])
     runMotions(motions)
@@ -1138,12 +1211,11 @@ def pathPlanningHelper(start_node, end_node, message):
     print(f'Goal found in: {(robot.getTime()-start_time):.2f}s')
 
 flag = True
-def pathPlanning(start_node, end_node):
+def pathPlanning(start_node, end_node, startlocationbool):
     global motion_theta, mappingbool, flag
-    startLocation = False
 
     # assuming we load the map, and the robot is on the starting position
-    if startLocation:
+    if startlocationbool:
         mappingbool = False
         coma_indx = start_node.find(',')
         node_i = int(start_node[:coma_indx])
@@ -1203,4 +1275,4 @@ def pathPlanning(start_node, end_node):
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("3,0", "0,0")
+    pathPlanning("3,3", "1,2", True)

@@ -8,7 +8,7 @@ orthographicViewHeight: 1
 textFiles: -1
 consoles: Console:All:All
 renderingDevicePerspectives: e-puck:camera;1;1;0;0
-renderingDevicePerspectives: e-puck:cameraFront;1;1;0;0
-renderingDevicePerspectives: e-puck:cameraLeft;1;1;0.306723;0
-renderingDevicePerspectives: e-puck:cameraRear;1;1;0.197479;0
-renderingDevicePerspectives: e-puck:cameraRight;1;1;0.10084;0
+renderingDevicePerspectives: e-puck:cameraFront;1;0.8125;0;0
+renderingDevicePerspectives: e-puck:cameraLeft;1;0.555619;0.306723;0
+renderingDevicePerspectives: e-puck:cameraRear;1;0.647111;0.197479;0
+renderingDevicePerspectives: e-puck:cameraRight;1;0.728047;0.10084;0

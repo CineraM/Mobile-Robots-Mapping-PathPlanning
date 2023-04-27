@@ -1,0 +1,18 @@
+Task 1:
+    Place the robot at the center of any tile
+    Theta does no matter, the robot will rotate until 90 deg before mapping
+
+
+Task 2:
+    Input = pathPlanning("3,3", "2,2", True)
+
+    refer to cells in the grid as a 2d matrix
+    i.e. cell 0 -> 0,0
+         cell 5 -> 1,0
+
+    pathPlanning(starting location, goal, starting location boolean)
+
+    Knwon starting location:
+        if the starting position is known, place the robot
+
+    Unkown starting location: 

@@ -145,6 +145,7 @@ class mazeMap:
     # code that generates the 4 points for all tiles, n*n tiles
     # generates top left, top right, bottom left, bottom right points of an nxn grid
     def generateTiles(self, top_left=20, step=10):
+        self.tiles = []
         y = top_left
         for i in range(self.n):
             x = -top_left
@@ -152,7 +153,7 @@ class mazeMap:
                 self.tiles.append([[x, y], [x+step, y], [x, y-step], [x+step, y-step]])
                 x+=step
             y-=step
-
+        
     # bottom left, top right, robot
     def updateTile(self, pose):
         # up, down, left, right instead looking though all the tiles
@@ -173,6 +174,7 @@ class mazeMap:
         return -1
     
     def generateGrid(self):
+        self.grid = []
         for i in range(self.n):
             temp = [] 
             for j in range(self.n):
@@ -257,7 +259,7 @@ MAZE = mazeMap(n=8)
 MAZE.generateTiles()
 MAZE.generateGrid()
 
-ROBOT_POSE = RobotPose(15.0, -25.0, 36, 90)
+ROBOT_POSE = RobotPose(15.0, -25.0, 28, 90)
 MAZE.updateGrid(ROBOT_POSE.tile-1)
 
 ########################## Motion logic ######################## 
@@ -611,7 +613,39 @@ def rotateUntilAngle(angle):
                 setSpeedIPS(0, 0)
                 break
 
-print("Rotating until 90 degrees...")
-rotateUntilAngle(90)
-while robot.step(timestep) != -1:
-    traverse()
+
+def TA_helper_fnc(x, y, theta):
+    global MAZE, ROBOT_POSE
+    ROBOT_POSE.x = x
+    ROBOT_POSE.y = y
+    ROBOT_POSE.theta = theta
+    MAZE.generateGrid()
+    
+    for i in range(len(MAZE.tiles)):
+        tl = MAZE.tiles[i][0]
+        br = MAZE.tiles[i][3]
+
+        if x > tl[0] and x < br[0]:
+            if y < tl[1] and y > br[1]:
+                ROBOT_POSE.tile = i+1
+                break
+    MAZE.updateGrid(ROBOT_POSE.tile-1)
+            
+#####################
+# ROBOT_POSE = RobotPose(15.0, -25.0, 36, 90)
+# TA use
+ta_x = -15;
+ta_y = 15;
+ta_theta = 90;
+
+#####################
+
+def main():
+    TA_helper_fnc(ta_x, ta_y, ta_theta)
+    print("Rotating until 90 degrees...")
+    rotateUntilAngle(90)
+    while robot.step(timestep) != -1:
+        traverse()
+
+if __name__ == "__main__":
+    main()

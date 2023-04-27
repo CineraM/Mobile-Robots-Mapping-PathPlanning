@@ -1275,4 +1275,5 @@ def pathPlanning(start_node, end_node, startlocationbool):
 
 # main loop
 while robot.step(timestep) != -1:
-    pathPlanning("3,3", "1,2", False)
+    # pathPlanning("3,3", "1,2", False)
+    pathPlanning("3,3", "2,2", True)

@@ -650,15 +650,19 @@ def TA_helper_fnc(x, y, theta):
 #####################
 
 # TA use
-ta_x = -15;
-ta_y = 15;
+ta_x = 15;
+ta_y = -15;
 ta_theta = 90;
 # Assuming the robot will be placed on the center of a cell/tile
+
+# Unkown starting location
+# comment out the "TA_helper_fnc()" function in main.
+# The algorithm will map the enviroment, then normalize the graph and save it
 
 #####################
 
 def main():
-    # TA_helper_fnc(ta_x, ta_y, ta_theta)
+    TA_helper_fnc(ta_x, ta_y, ta_theta)
     print("Rotating until 90 degrees...")
     rotateUntilAngle(90)
     while robot.step(timestep) != -1:

@@ -5,14 +5,18 @@ Task 1:
 
 Task 2:
     Input = pathPlanning("3,3", "2,2", True)
+    pathPlanning(starting location, goal, starting location boolean)
 
-    refer to cells in the grid as a 2d matrix
+    --> refer to cells in the grid as a 2d matrix (4x4)
+    # use this notation for the input of the function
     i.e. cell 0 -> 0,0
          cell 5 -> 1,0
 
-    pathPlanning(starting location, goal, starting location boolean)
+    Unkown starting location:
+    If starting location is not known, the robot will perform task 1 to map the enviroment.
+    Once mapped, it will create a wave-front planner to traverse to the first starting location.
+    Then, it will do the same from the starting location to the goal
 
-    Knwon starting location:
-        if the starting position is known, place the robot
-
-    Unkown starting location: 
+    Known starting location:
+        if the starting position is known, place the robot in the starting
+        cell either looking north, south, east, or west 

@@ -1285,10 +1285,36 @@ def pathPlanning(start_node, end_node, startlocationbool):
 
             spin()
 
+
+#####################
+
+# TA use
+
+# ---------------- INPUT ----------------
+# Input = pathPlanning("3,3", "2,2", True)
+# pathPlanning(starting location, goal, starting location boolean)
+
+# ------------ INPUT Format -------------
+# --> refer to cells in the grid as a 2d matrix (4x4)
+# use this notation for the input for PathPlanning
+#   i.e.  cell 0 -> 0,0
+#         cell 5 -> 1,0
+
+# ---------- STARTING LOCATION -----------
+# Unkown starting location:
+# If starting location is not known, the robot will perform task 1 to map the enviroment.
+# Once mapped, it will create a wave-front planner to traverse to the first starting location.
+# Then, it will do the same from the starting location to the goal
+
+# Known starting location:
+#     if the starting position is known, place the robot in the starting
+#     cell either looking north, south, east, or west 
+
+#####################
+
 def main():
     while robot.step(timestep) != -1:
-        # pathPlanning("3,3", "1,2", False)
-        pathPlanning("3,3", "2,2", True)
+        pathPlanning("2,1", "0,1", False)
 
 if __name__ == "__main__":
     main()

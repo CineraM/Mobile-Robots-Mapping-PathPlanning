@@ -90,7 +90,14 @@ def getLidar():
     ret.append(image[270]*toIn - half_of_robot) # left
     ret.append(image[90]*toIn - half_of_robot)  # right
     ret.append(image[180]*toIn - half_of_robot) # back
-    
+    return ret
+
+def getDistSensors():
+    ret = []
+    ret.append(frontDistanceSensor.getValue()*toIn)
+    ret.append(leftDistanceSensor.getValue()*toIn)
+    ret.append(rightDistanceSensor.getValue()*toIn)
+    ret.append(rearDistanceSensor.getValue()*toIn)
     return ret
 
 # set speed to both motors, input in Inches
@@ -167,12 +174,17 @@ class mazeMap:
         # up, left, right, down
         possible_tiles = [cur_tile-n, cur_tile-1, cur_tile+1, cur_tile+n]
         
+        i = cur_tile//self.n
+        j = cur_tile%self.n
+        
+        if i == 0: possible_tiles.pop(possible_tiles.index(cur_tile-n))
+        if i == MAZE.n-1: possible_tiles.pop(possible_tiles.index(cur_tile+n))
+        if j == 0: possible_tiles.pop(possible_tiles.index(cur_tile-1))
+        if j == MAZE.n-1: possible_tiles.pop(possible_tiles.index(cur_tile+1))
+        
         for i in possible_tiles:
-            try:
-                tl = self.tiles[i][0]
-                br = self.tiles[i][3]
-            except:
-                continue
+            tl = self.tiles[i][0]
+            br = self.tiles[i][3]
             x, y = pose.x, pose.y
 
             if x > tl[0] and x < br[0]:
@@ -316,9 +328,9 @@ MAZE.updateGrid(ROBOT_POSE.tile-1)
 # basically returns the valid edges in a graph
 def checkWalls(theta):
     # front, left, right, back
-    lidar = getLidar()
+    dist_sensors = getDistSensors()
     no_wall = []
-    for lid in lidar:
+    for lid in dist_sensors:
         if lid < 6:
             no_wall.append(False)
         else:
@@ -788,14 +800,14 @@ def loadGraph():
 
     with open(path, "r") as fp:
         MAZE.graph = json.load(fp)
-    print("Graph successfully loaded!")
-    print("Graph contents: (Edges format: Up, Left, Right, Down)")
-    for i in range(4):
-        for j in range(4):
-            s = str(i) + ',' + str(j)
-            if s in MAZE.graph:
-                print(f'node: {s} , edges: {MAZE.graph[s]}')
-    print("--------------------------------------------------")
+    # print("Graph successfully loaded!")
+    # print("Graph contents: (Edges format: Up, Left, Right, Down)")
+    # for i in range(4):
+    #     for j in range(4):
+    #         s = str(i) + ',' + str(j)
+    #         if s in MAZE.graph:
+    #             print(f'node: {s} , edges: {MAZE.graph[s]}')
+    # print("--------------------------------------------------")
 
 def bfsToList(bfs):
     new_list = []
@@ -1235,7 +1247,7 @@ def pathPlanning(start_node, end_node, startlocationbool):
 
         pathPlanningHelper(start_node, end_node, "Traversing to end node...")
 
-        print("sping :)")
+        print("spin :)")
         spin()
     else:
         if flag:
@@ -1269,11 +1281,14 @@ def pathPlanning(start_node, end_node, startlocationbool):
 
             pathPlanningHelper(start_node, end_node, "Traversing to end node...")
 
-            print("sping :)")
+            print("spin :)")
 
             spin()
 
-# main loop
-while robot.step(timestep) != -1:
-    # pathPlanning("3,3", "1,2", False)
-    pathPlanning("3,3", "2,2", True)
+def main():
+    while robot.step(timestep) != -1:
+        # pathPlanning("3,3", "1,2", False)
+        pathPlanning("3,3", "2,2", True)
+
+if __name__ == "__main__":
+    main()
